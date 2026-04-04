@@ -847,12 +847,16 @@ async function fetchWeather() {
 async function fetchNews(weatherComment) {
   try {
     const rss = 'https://www3.nhk.or.jp/rss/news/cat0.xml';
-    const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}&count=5`;
-    const res  = await fetch(api);
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(rss)}`;
+    const res  = await fetch(proxy);
     const json = await res.json();
-    if (json.status !== 'ok' || !json.items?.length) return;
+    if (!json.contents) return;
 
-    const headlines = json.items.map(item => `📰 ${item.title}`);
+    const xml = new DOMParser().parseFromString(json.contents, 'text/xml');
+    const items = [...xml.querySelectorAll('item')].slice(0, 5);
+    if (!items.length) return;
+
+    const headlines = items.map(item => `📰 ${item.querySelector('title')?.textContent || ''}`);
     const ticker = document.getElementById('weather-ticker');
     const tickerText = document.getElementById('weather-ticker-text');
     if (!ticker || !tickerText) return;
@@ -863,14 +867,12 @@ async function fetchNews(weatherComment) {
     function showNext() {
       tickerText.style.animation = 'none';
       tickerText.textContent = messages[idx % messages.length];
-      // アニメーションを再起動
       void tickerText.offsetWidth;
       tickerText.style.animation = '';
       idx++;
     }
 
     showNext();
-    // アニメーション1周（14秒）ごとに次のメッセージへ
     setInterval(showNext, 14000);
   } catch {
     // ニュース取得失敗は無視（天気コメントのみ継続）
