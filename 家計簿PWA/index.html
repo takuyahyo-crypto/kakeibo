@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="家計簿">
+  <meta name="theme-color" content="#4CAF50">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <title>ふたり家計簿</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     セットアップ画面（初回のみ）
+════════════════════════════════════ -->
+<div id="setup-screen">
+  <div class="setup-inner">
+    <div class="setup-hero">
+      <div class="setup-emoji">💰</div>
+      <h1>ふたり家計簿</h1>
+      <p>世帯コードを共有して<br>2人でお金を管理しましょう</p>
+    </div>
+
+    <div class="setup-actions">
+      <!-- 新規作成 -->
+      <button class="btn-primary" id="btn-create">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        新しい世帯を作成
+      </button>
+
+      <div class="divider"><span>または</span></div>
+
+      <!-- コードで参加 -->
+      <div class="join-form">
+        <input type="text" id="inp-join-code"
+               placeholder="世帯コード（例: AB3K7Z）"
+               maxlength="6"
+               autocapitalize="characters"
+               autocorrect="off"
+               spellcheck="false">
+        <p class="err-msg" id="join-err"></p>
+        <button class="btn-secondary" id="btn-join">参加する</button>
+      </div>
+    </div>
+
+    <p class="setup-note">コードを相手と共有することで<br>同じ家計簿にアクセスできます</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     メイン画面
+════════════════════════════════════ -->
+<div id="main-screen" class="hidden">
+
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <button class="header-icon" id="btn-month-prev" aria-label="前月">&#8249;</button>
+    <span id="header-month"></span>
+    <button class="header-icon" id="btn-month-next" aria-label="翌月">&#8250;</button>
+    <button class="header-icon" id="btn-share" aria-label="共有">
+      <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+    </button>
+  </header>
+
+  <!-- タブコンテンツ -->
+  <main class="tab-content">
+
+    <!-- ホーム -->
+    <div class="tab-pane active" id="tab-home">
+      <!-- 天気カード -->
+      <div class="weather-card" id="weather-card">
+        <div class="weather-loading">天気を取得中...</div>
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-card">
+          <div class="summary-label">今月の支出</div>
+          <div class="summary-amount" id="home-month-total">¥0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">今日の支出</div>
+          <div class="summary-amount" id="home-today-total">¥0</div>
+        </div>
+      </div>
+
+      <div class="payer-summary-row">
+        <div class="payer-summary-card takuya-card" onclick="openPayerDetail('卓哉')">
+          <div class="payer-summary-name">👨 卓哉</div>
+          <div class="payer-summary-amount" id="home-takuya-total">¥0</div>
+          <div class="payer-summary-hint">タップで内訳</div>
+        </div>
+        <div class="payer-summary-card yumiko-card" onclick="openPayerDetail('由美子')">
+          <div class="payer-summary-name">👩 由美子</div>
+          <div class="payer-summary-amount" id="home-yumiko-total">¥0</div>
+          <div class="payer-summary-hint">タップで内訳</div>
+        </div>
+      </div>
+
+      <!-- 予算アラート -->
+      <div class="budget-card" id="budget-card"></div>
+
+      <!-- 最近の取引 -->
+      <div class="card">
+        <div class="card-header">最近の取引</div>
+        <div id="home-tx-list"></div>
+      </div>
+    </div>
+
+    <!-- 追加 -->
+    <div class="tab-pane" id="tab-add">
+      <div class="card">
+        <!-- 金額 -->
+        <div class="form-group">
+          <label>金額</label>
+          <div class="amount-wrap">
+            <span class="yen-sign">¥</span>
+            <input type="number" id="inp-amount" placeholder="0"
+                   inputmode="numeric" min="1">
+          </div>
+        </div>
+
+        <!-- カテゴリ -->
+        <div class="form-group">
+          <label>カテゴリ</label>
+          <div class="cat-grid" id="cat-grid"></div>
+        </div>
+
+        <!-- 支払者 -->
+        <div class="form-group">
+          <label>支払者</label>
+          <div class="payer-grid">
+            <button class="payer-btn sel" id="payer-takuya" onclick="selectPayer('卓哉')">👨 卓哉</button>
+            <button class="payer-btn"    id="payer-yumiko" onclick="selectPayer('由美子')">👩 由美子</button>
+          </div>
+        </div>
+
+        <!-- 日付 -->
+        <div class="form-group">
+          <label>日付</label>
+          <input type="date" id="inp-date">
+        </div>
+
+        <!-- メモ -->
+        <div class="form-group">
+          <label>メモ（任意）</label>
+          <input type="text" id="inp-memo" placeholder="例：スーパーで買い物">
+        </div>
+
+        <button class="btn-primary full" id="btn-add-submit">追加する</button>
+      </div>
+    </div>
+
+    <!-- 履歴 -->
+    <div class="tab-pane" id="tab-history">
+      <div id="history-list"></div>
+    </div>
+
+    <!-- グラフ -->
+    <div class="tab-pane" id="tab-chart">
+      <div class="card">
+        <div class="card-header">日別支出カレンダー</div>
+        <div id="cal-grid"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">カテゴリ別</div>
+        <div class="chart-wrap pie-wrap"><canvas id="pie-chart"></canvas></div>
+        <div id="cat-breakdown"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">💰 由美子の貯金履歴</div>
+        <div class="savings-summary">
+          <div class="savings-summary-inner">
+            <div class="savings-summary-label">累計貯金額</div>
+            <div class="savings-summary-amount" id="savings-cumulative">¥0</div>
+            <div class="savings-summary-sub" id="savings-months-count"></div>
+          </div>
+        </div>
+        <div id="savings-chart-wrap" class="chart-wrap savings-chart-wrap">
+          <canvas id="savings-chart"></canvas>
+        </div>
+        <div id="savings-list"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ボトムナビ -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="home">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      ホーム
+    </button>
+    <button class="nav-btn" data-tab="add">
+      <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      追加
+    </button>
+    <button class="nav-btn" data-tab="history">
+      <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      履歴
+    </button>
+    <button class="nav-btn" data-tab="chart">
+      <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+      グラフ
+    </button>
+  </nav>
+</div>
+
+<!-- 支払い内訳モーダル -->
+<div id="payer-detail-modal" class="modal hidden">
+  <div class="modal-backdrop" id="payer-detail-backdrop"></div>
+  <div class="modal-card payer-detail-card">
+    <div class="payer-detail-header">
+      <div class="modal-title" id="payer-detail-title"></div>
+      <div class="payer-detail-total" id="payer-detail-total"></div>
+    </div>
+    <div id="payer-detail-cats"></div>
+    <div id="payer-detail-list"></div>
+    <button class="btn-ghost full" id="btn-close-payer-detail">閉じる</button>
+  </div>
+</div>
+
+<!-- 共有モーダル -->
+<div id="share-modal" class="modal hidden">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-card">
+    <div class="modal-title">世帯コード</div>
+    <div class="code-display" id="modal-code"></div>
+    <p class="modal-note">このコードを相手に共有すると<br>同じ家計簿を使えます</p>
+    <button class="btn-primary full" id="btn-copy-code">コードをコピー</button>
+    <button class="btn-ghost full" id="btn-close-modal">閉じる</button>
+  </div>
+</div>
+
+<!-- 成功トースト -->
+<div id="toast" class="toast hidden">追加しました ✓</div>
+
+<!-- 処理中オーバーレイ -->
+<div id="loading-overlay" class="loading-overlay hidden">
+  <div class="loading-spinner"></div>
+  <div class="loading-label">保存中...</div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Apps Script URL設定（自分のURLに書き換える） -->
+<script src="config.js"></script>
+<!-- アプリ本体 -->
+<script src="app.js"></script>
+</body>
+</html>
