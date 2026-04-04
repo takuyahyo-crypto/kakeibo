@@ -483,7 +483,9 @@ function renderCalendar(txs) {
     const isToday  = day === todayDay;
     const amtLabel = amount > 0 ? `¥${amount.toLocaleString()}` : '';
     html += `
-      <div class="cal-cell ${isToday ? 'cal-today' : ''}" style="background:rgba(76,175,80,${alpha})">
+      <div class="cal-cell ${isToday ? 'cal-today' : ''} ${amount > 0 ? 'cal-has-data' : ''}"
+           style="background:rgba(76,175,80,${alpha})"
+           ${amount > 0 ? `onclick="openDayDetail(${day})"` : ''}>
         <div class="cal-day">${day}</div>
         <div class="cal-amt">${amtLabel}</div>
       </div>`;
@@ -592,11 +594,12 @@ function renderCharts() {
   }
 
   document.getElementById('cat-breakdown').innerHTML = catEntries.map(c => `
-    <div class="br-row">
+    <div class="br-row br-row-tap" onclick="openCatDetail('${c.id}')">
       <div class="br-icon">${c.icon}</div>
       <div class="br-name">${c.label}</div>
       <div class="br-bar-bg"><div class="br-bar" style="width:${grand ? Math.round(c.total/grand*100) : 0}%; background:${c.color}"></div></div>
       <div class="br-amount">${fmt(c.total)}</div>
+      <div class="br-chevron">›</div>
     </div>
   `).join('');
 
@@ -613,23 +616,17 @@ function showToast(msg) {
 }
 
 // ════════════════════════════════
-// 支払い内訳モーダル
+// 汎用内訳モーダル
 // ════════════════════════════════
-function openPayerDetail(payer) {
-  const txs = monthTxs().filter(t => t.payer === payer);
-  const total = txs.reduce((s, t) => s + t.amount, 0);
-
-  const emoji = payer === '卓哉' ? '👨' : '👩';
-  document.getElementById('payer-detail-title').textContent = `${emoji} ${payer}の内訳`;
+function openDetailModal(title, total, txs) {
+  document.getElementById('payer-detail-title').textContent = title;
   document.getElementById('payer-detail-total').textContent = fmt(total);
 
-  // カテゴリ別集計
   const catMap = {};
-  txs.forEach(t => {
-    catMap[t.category] = (catMap[t.category] || 0) + t.amount;
-  });
+  txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
   const sortedCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-  document.getElementById('payer-detail-cats').innerHTML = sortedCats.length === 0 ? '' :
+
+  document.getElementById('payer-detail-cats').innerHTML = sortedCats.length <= 1 ? '' :
     `<div class="payer-detail-section-label">カテゴリ別</div>` +
     sortedCats.map(([catId, amt]) => {
       const cat = CAT_MAP[catId] || CAT_MAP['other'];
@@ -643,13 +640,33 @@ function openPayerDetail(payer) {
         </div>`;
     }).join('');
 
-  // 取引一覧
   document.getElementById('payer-detail-list').innerHTML = txs.length === 0
-    ? `<div class="empty"><div class="ei">📝</div><p>今月の支払いはありません</p></div>`
+    ? `<div class="empty"><div class="ei">📝</div><p>記録がありません</p></div>`
     : `<div class="payer-detail-section-label">取引一覧</div>
        <div class="payer-detail-tx-group">${txs.map(txHtml).join('')}</div>`;
 
   document.getElementById('payer-detail-modal').classList.remove('hidden');
+}
+
+function openPayerDetail(payer) {
+  const txs = monthTxs().filter(t => t.payer === payer);
+  const total = txs.reduce((s, t) => s + t.amount, 0);
+  const emoji = payer === '卓哉' ? '👨' : '👩';
+  openDetailModal(`${emoji} ${payer}の内訳`, total, txs);
+}
+
+function openDayDetail(day) {
+  const dateStr = `${state.currentMonth}-${String(day).padStart(2, '0')}`;
+  const txs = monthTxs().filter(t => t.date === dateStr);
+  const total = txs.reduce((s, t) => s + t.amount, 0);
+  openDetailModal(formatDisplayDate(dateStr) + ' の内訳', total, txs);
+}
+
+function openCatDetail(catId) {
+  const cat = CAT_MAP[catId] || CAT_MAP['other'];
+  const txs = monthTxs().filter(t => t.category === catId);
+  const total = txs.reduce((s, t) => s + t.amount, 0);
+  openDetailModal(`${cat.icon} ${cat.label}の内訳`, total, txs);
 }
 
 function closePayerDetail() {
@@ -729,12 +746,45 @@ function findHourIndex(times, targetHour) {
   return times.findIndex(t => t.startsWith(todayStr + 'T' + String(targetHour).padStart(2,'0')));
 }
 
+function buildWeatherComment(times, codes, temps) {
+  const todayStr = today();
+  const rainCodes = new Set([51,53,55,61,63,65,80,81,82,95,96,99]);
+  const snowCodes = new Set([71,73,75]);
+  const todayIdxs = times.reduce((arr, t, i) => { if (t.startsWith(todayStr)) arr.push(i); return arr; }, []);
+
+  for (const i of todayIdxs) {
+    if (snowCodes.has(codes[i])) {
+      const hour = parseInt(times[i].slice(11, 13));
+      return `本日は${hour}時ごろに雪の予報があります ❄️`;
+    }
+    if (rainCodes.has(codes[i])) {
+      const hour = parseInt(times[i].slice(11, 13));
+      return `本日は${hour}時ごろに${WMO_LABEL[codes[i]]}の予報があります ☔`;
+    }
+  }
+  if (todayIdxs.length > 0) {
+    const maxTemp = Math.round(Math.max(...todayIdxs.map(i => temps[i])));
+    const minTemp = Math.round(Math.min(...todayIdxs.map(i => temps[i])));
+    const noonIdx = todayIdxs.find(i => times[i].includes('T12:')) ?? todayIdxs[0];
+    const noonLabel = WMO_LABEL[codes[noonIdx]] || '晴れ';
+    if (maxTemp >= 28) return `今日は最高${maxTemp}°の暑い一日です 🌞`;
+    if (minTemp <= 5)  return `今日は最低${minTemp}°の寒い一日です 🥶`;
+    return `今日は一日を通して${noonLabel}の見込みです 🌤️`;
+  }
+  return '今日も一日頑張りましょう！';
+}
+
 async function fetchWeather() {
   const card = document.getElementById('weather-card');
   if (!navigator.geolocation) {
     card.innerHTML = '<div class="weather-err">位置情報が使えません</div>';
     return;
   }
+
+  const d = new Date();
+  const DAYS = ['日','月','火','水','木','金','土'];
+  const dateHeader = `${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;
+
   navigator.geolocation.getCurrentPosition(async pos => {
     const { latitude: lat, longitude: lon } = pos.coords;
     try {
@@ -767,7 +817,13 @@ async function fetchWeather() {
           </div>`;
       }).join('');
 
-      card.innerHTML = `<div class="weather-slots">${slotHtml}</div>`;
+      const comment = buildWeatherComment(times, codes, temps);
+      card.innerHTML = `
+        <div class="weather-top">
+          <span class="weather-date">${dateHeader}</span>
+        </div>
+        <div class="weather-slots">${slotHtml}</div>
+        <div class="weather-comment"><span>${comment}</span></div>`;
     } catch {
       card.innerHTML = '<div class="weather-err">天気を取得できませんでした</div>';
     }
