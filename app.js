@@ -844,39 +844,56 @@ async function fetchWeather() {
   });
 }
 
-async function fetchNews(weatherComment) {
-  try {
-    const rss = 'https://www3.nhk.or.jp/rss/news/cat0.xml';
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(rss)}`;
-    const res  = await fetch(proxy);
-    const json = await res.json();
-    if (!json.contents) return;
-
-    const xml = new DOMParser().parseFromString(json.contents, 'text/xml');
-    const items = [...xml.querySelectorAll('item')].slice(0, 5);
-    if (!items.length) return;
-
-    const headlines = items.map(item => `📰 ${item.querySelector('title')?.textContent || ''}`);
-    const ticker = document.getElementById('weather-ticker');
-    const tickerText = document.getElementById('weather-ticker-text');
-    if (!ticker || !tickerText) return;
-
-    const messages = [weatherComment, ...headlines];
-    let idx = 0;
-
-    function showNext() {
-      tickerText.style.animation = 'none';
-      tickerText.textContent = messages[idx % messages.length];
-      void tickerText.offsetWidth;
-      tickerText.style.animation = '';
-      idx++;
-    }
-
-    showNext();
-    setInterval(showNext, 14000);
-  } catch {
-    // ニュース取得失敗は無視（天気コメントのみ継続）
+async function fetchRssXml(rssUrl) {
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`,
+  ];
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy, { signal: AbortSignal.timeout(6000) });
+      if (!res.ok) continue;
+      const text = proxy.includes('/raw?') ? await res.text() : (await res.json()).contents;
+      if (!text) continue;
+      const xml = new DOMParser().parseFromString(text, 'text/xml');
+      const items = [...xml.querySelectorAll('item')].slice(0, 5);
+      if (items.length) return items;
+    } catch { /* 次のプロキシへ */ }
   }
+  return null;
+}
+
+async function fetchNews(weatherComment) {
+  const tickerText = document.getElementById('weather-ticker-text');
+  if (!tickerText) return;
+
+  // ニュース取得を試みる
+  const sources = [
+    'https://www3.nhk.or.jp/rss/news/cat0.xml',
+    'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
+  ];
+
+  let headlines = [];
+  for (const src of sources) {
+    const items = await fetchRssXml(src);
+    if (items) {
+      headlines = items.map(item => `📰 ${item.querySelector('title')?.textContent?.trim() || ''}`).filter(t => t.length > 2);
+      if (headlines.length) break;
+    }
+  }
+
+  if (!headlines.length) return; // 取得失敗→天気コメントのみ継続
+
+  const messages = [weatherComment, ...headlines];
+  let idx = 1; // 0番目（天気コメント）はすでに表示中
+
+  setInterval(() => {
+    tickerText.style.animation = 'none';
+    tickerText.textContent = messages[idx % messages.length];
+    void tickerText.offsetWidth;
+    tickerText.style.animation = '';
+    idx++;
+  }, 14000);
 }
 
 // ════════════════════════════════
