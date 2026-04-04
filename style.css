@@ -772,6 +772,17 @@ input, textarea { font-family: inherit; }
   text-align: center;
   line-height: 1.6;
 }
+.btn-cache {
+  width: 100%;
+  padding: 14px;
+  border: 1.5px solid #FF9800;
+  background: #FFF3E0;
+  color: #E65100;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
 
 /* ════════════════════════════════
    予算カード

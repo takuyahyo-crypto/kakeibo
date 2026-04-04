@@ -712,6 +712,16 @@ function bindEvents() {
       .then(() => showToast('コードをコピーしました ✓'))
       .catch(() => showToast(state.householdCode));
   });
+  document.getElementById('btn-clear-cache').addEventListener('click', async () => {
+    if (!confirm('キャッシュをクリアしてアプリを最新版に更新しますか？')) return;
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) await reg.unregister();
+    }
+    const keys = await caches.keys();
+    for (const key of keys) await caches.delete(key);
+    window.location.reload(true);
+  });
 }
 
 // ════════════════════════════════
