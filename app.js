@@ -843,10 +843,12 @@ async function fetchWeather() {
 }
 
 async function fetchNews() {
-  if (!state.scriptUrl) return;
+  // scriptUrlはconfig.jsから読み込まれるため、windowから直接参照
+  const scriptUrl = (window.SCRIPT_URL && !window.SCRIPT_URL.includes('ここに')) ? window.SCRIPT_URL : '';
+  if (!scriptUrl) return;
 
   try {
-    const url = new URL(state.scriptUrl);
+    const url = new URL(scriptUrl);
     url.searchParams.set('action', 'news');
     url.searchParams.set('code', 'news');
     const res  = await fetch(url.toString());
