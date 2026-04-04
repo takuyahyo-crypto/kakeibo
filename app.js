@@ -833,13 +833,48 @@ async function fetchWeather() {
           <span class="weather-date">${dateHeader}</span>
         </div>
         <div class="weather-slots">${slotHtml}</div>
-        <div class="weather-comment"><span>${comment}</span></div>`;
+        <div class="weather-comment" id="weather-ticker"><span id="weather-ticker-text">${comment}</span></div>`;
+
+      fetchNews(comment);
     } catch {
       card.innerHTML = '<div class="weather-err">天気を取得できませんでした</div>';
     }
   }, () => {
     card.innerHTML = '<div class="weather-err">位置情報を許可してください</div>';
   });
+}
+
+async function fetchNews(weatherComment) {
+  try {
+    const rss = 'https://www3.nhk.or.jp/rss/news/cat0.xml';
+    const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}&count=5`;
+    const res  = await fetch(api);
+    const json = await res.json();
+    if (json.status !== 'ok' || !json.items?.length) return;
+
+    const headlines = json.items.map(item => `📰 ${item.title}`);
+    const ticker = document.getElementById('weather-ticker');
+    const tickerText = document.getElementById('weather-ticker-text');
+    if (!ticker || !tickerText) return;
+
+    const messages = [weatherComment, ...headlines];
+    let idx = 0;
+
+    function showNext() {
+      tickerText.style.animation = 'none';
+      tickerText.textContent = messages[idx % messages.length];
+      // アニメーションを再起動
+      void tickerText.offsetWidth;
+      tickerText.style.animation = '';
+      idx++;
+    }
+
+    showNext();
+    // アニメーション1周（14秒）ごとに次のメッセージへ
+    setInterval(showNext, 14000);
+  } catch {
+    // ニュース取得失敗は無視（天気コメントのみ継続）
+  }
 }
 
 // ════════════════════════════════
