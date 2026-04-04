@@ -844,56 +844,34 @@ async function fetchWeather() {
   });
 }
 
-async function fetchRssXml(rssUrl) {
-  const proxies = [
-    `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`,
-  ];
-  for (const proxy of proxies) {
-    try {
-      const res = await fetch(proxy, { signal: AbortSignal.timeout(6000) });
-      if (!res.ok) continue;
-      const text = proxy.includes('/raw?') ? await res.text() : (await res.json()).contents;
-      if (!text) continue;
-      const xml = new DOMParser().parseFromString(text, 'text/xml');
-      const items = [...xml.querySelectorAll('item')].slice(0, 5);
-      if (items.length) return items;
-    } catch { /* 次のプロキシへ */ }
-  }
-  return null;
-}
-
 async function fetchNews(weatherComment) {
   const tickerText = document.getElementById('weather-ticker-text');
-  if (!tickerText) return;
+  if (!tickerText || !state.scriptUrl) return;
 
-  // ニュース取得を試みる
-  const sources = [
-    'https://www3.nhk.or.jp/rss/news/cat0.xml',
-    'https://news.yahoo.co.jp/rss/topics/top-picks.xml',
-  ];
+  try {
+    const url = new URL(state.scriptUrl);
+    url.searchParams.set('action', 'news');
+    url.searchParams.set('code', state.householdCode || 'none');
+    const res  = await fetch(url.toString());
+    const json = await res.json();
+    if (!Array.isArray(json) || !json.length) return;
 
-  let headlines = [];
-  for (const src of sources) {
-    const items = await fetchRssXml(src);
-    if (items) {
-      headlines = items.map(item => `📰 ${item.querySelector('title')?.textContent?.trim() || ''}`).filter(t => t.length > 2);
-      if (headlines.length) break;
-    }
+    const headlines = json.map(item => `📰 ${item.title}`).filter(t => t.length > 2);
+    if (!headlines.length) return;
+
+    const messages = [weatherComment, ...headlines];
+    let idx = 1; // 0番目（天気コメント）はすでに表示中
+
+    setInterval(() => {
+      tickerText.style.animation = 'none';
+      tickerText.textContent = messages[idx % messages.length];
+      void tickerText.offsetWidth;
+      tickerText.style.animation = '';
+      idx++;
+    }, 14000);
+  } catch {
+    // 取得失敗→天気コメントのみ継続
   }
-
-  if (!headlines.length) return; // 取得失敗→天気コメントのみ継続
-
-  const messages = [weatherComment, ...headlines];
-  let idx = 1; // 0番目（天気コメント）はすでに表示中
-
-  setInterval(() => {
-    tickerText.style.animation = 'none';
-    tickerText.textContent = messages[idx % messages.length];
-    void tickerText.offsetWidth;
-    tickerText.style.animation = '';
-    idx++;
-  }, 14000);
 }
 
 // ════════════════════════════════
