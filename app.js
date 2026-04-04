@@ -834,8 +834,6 @@ async function fetchWeather() {
         </div>
         <div class="weather-slots">${slotHtml}</div>
         <div class="weather-comment" id="weather-ticker"><span id="weather-ticker-text">${comment}</span></div>`;
-
-      fetchNews(comment);
     } catch {
       card.innerHTML = '<div class="weather-err">天気を取得できませんでした</div>';
     }
@@ -844,14 +842,13 @@ async function fetchWeather() {
   });
 }
 
-async function fetchNews(weatherComment) {
-  const tickerText = document.getElementById('weather-ticker-text');
-  if (!tickerText || !state.scriptUrl) return;
+async function fetchNews() {
+  if (!state.scriptUrl) return;
 
   try {
     const url = new URL(state.scriptUrl);
     url.searchParams.set('action', 'news');
-    url.searchParams.set('code', state.householdCode || 'none');
+    url.searchParams.set('code', 'news');
     const res  = await fetch(url.toString());
     const json = await res.json();
     if (!Array.isArray(json) || !json.length) return;
@@ -859,14 +856,21 @@ async function fetchNews(weatherComment) {
     const headlines = json.map(item => `📰 ${item.title}`).filter(t => t.length > 2);
     if (!headlines.length) return;
 
+    // 天気コメントが表示されてからニュースを追加
+    const tickerText = document.getElementById('weather-ticker-text');
+    if (!tickerText) return;
+
+    const weatherComment = tickerText.textContent;
     const messages = [weatherComment, ...headlines];
-    let idx = 1; // 0番目（天気コメント）はすでに表示中
+    let idx = 1;
 
     setInterval(() => {
-      tickerText.style.animation = 'none';
-      tickerText.textContent = messages[idx % messages.length];
-      void tickerText.offsetWidth;
-      tickerText.style.animation = '';
+      const el = document.getElementById('weather-ticker-text');
+      if (!el) return;
+      el.style.animation = 'none';
+      el.textContent = messages[idx % messages.length];
+      void el.offsetWidth;
+      el.style.animation = '';
       idx++;
     }, 14000);
   } catch {
@@ -887,6 +891,7 @@ function init() {
   document.getElementById('inp-date').value = today();
   renderCatGrid();
   fetchWeather();
+  setTimeout(fetchNews, 3000); // 天気表示後3秒後にニュース取得
 
   if (state.householdCode) {
     document.getElementById('setup-screen').classList.add('hidden');
