@@ -843,28 +843,29 @@ async function fetchWeather() {
 }
 
 async function fetchNews() {
-  // scriptUrlはconfig.jsから読み込まれるため、windowから直接参照
   const scriptUrl = (window.SCRIPT_URL && !window.SCRIPT_URL.includes('ここに')) ? window.SCRIPT_URL : '';
-  if (!scriptUrl) return;
+  if (!scriptUrl) { console.warn('[News] scriptUrl未設定'); return; }
 
   try {
     const url = new URL(scriptUrl);
     url.searchParams.set('action', 'news');
     url.searchParams.set('code', 'news');
+    console.log('[News] 取得開始:', url.toString());
     const res  = await fetch(url.toString());
     const json = await res.json();
-    if (!Array.isArray(json) || !json.length) return;
+    console.log('[News] レスポンス:', json);
+    if (!Array.isArray(json) || !json.length) { console.warn('[News] データなし'); return; }
 
     const headlines = json.map(item => `📰 ${item.title}`).filter(t => t.length > 2);
-    if (!headlines.length) return;
+    if (!headlines.length) { console.warn('[News] headlines空'); return; }
 
-    // 天気コメントが表示されてからニュースを追加
     const tickerText = document.getElementById('weather-ticker-text');
-    if (!tickerText) return;
+    if (!tickerText) { console.warn('[News] ticker要素なし'); return; }
 
     const weatherComment = tickerText.textContent;
     const messages = [weatherComment, ...headlines];
     let idx = 1;
+    console.log('[News] 表示開始 件数:', headlines.length);
 
     setInterval(() => {
       const el = document.getElementById('weather-ticker-text');
@@ -875,8 +876,8 @@ async function fetchNews() {
       el.style.animation = '';
       idx++;
     }, 14000);
-  } catch {
-    // 取得失敗→天気コメントのみ継続
+  } catch(e) {
+    console.error('[News] エラー:', e);
   }
 }
 
