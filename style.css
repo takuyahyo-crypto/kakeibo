@@ -363,7 +363,11 @@ input, textarea { font-family: inherit; }
   font-size: 13px;
   font-weight: 600;
   color: #E65100;
-  animation: weather-scroll 12s linear infinite;
+  animation: shared-scroll 14s linear infinite;
+}
+@keyframes shared-scroll {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-200%); }
 }
 
 /* 共有コメント管理 */
