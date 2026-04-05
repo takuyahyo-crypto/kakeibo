@@ -264,7 +264,6 @@ async function addSharedComment() {
 
   document.getElementById('sc-inp-text').value = '';
   showToast('コメントを追加しました ✓');
-  setTimeout(renderScList, 3000);
 }
 
 async function deleteSharedComment(id) {
