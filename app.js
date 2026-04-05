@@ -164,6 +164,8 @@ function stopPolling() {
 // 共有コメント
 // ════════════════════════════════
 let sharedCommentTimer = null;
+let sharedComments     = [];
+let sharedCommentIdx   = 0;
 
 async function fetchSharedComments() {
   if (!state.scriptUrl || !state.householdCode) return;
@@ -184,23 +186,31 @@ function renderSharedTicker(comments) {
   const el   = document.getElementById('shared-ticker-text');
   if (!wrap || !el) return;
 
+  const wasEmpty = sharedComments.length === 0;
+  sharedComments = comments;
+
   if (!comments.length) {
     wrap.classList.add('hidden');
+    if (sharedCommentTimer) { clearInterval(sharedCommentTimer); sharedCommentTimer = null; }
     return;
   }
   wrap.classList.remove('hidden');
 
-  if (sharedCommentTimer) clearInterval(sharedCommentTimer);
-  let idx = 0;
+  // タイマーがすでに動いていれば継続（次回のshowで新データが使われる）
+  if (!wasEmpty && sharedCommentTimer) return;
+
+  // 初回のみタイマーを起動
+  sharedCommentIdx = 0;
   function show() {
+    if (!sharedComments.length) return;
     el.style.animation = 'none';
-    el.textContent = comments[idx % comments.length].text;
+    el.textContent = sharedComments[sharedCommentIdx % sharedComments.length].text;
     void el.offsetWidth;
     el.style.animation = '';
-    idx++;
+    sharedCommentIdx++;
   }
   show();
-  sharedCommentTimer = setInterval(show, 12000);
+  sharedCommentTimer = setInterval(show, 14000);
 }
 
 function toggleExpiry(cb) {
