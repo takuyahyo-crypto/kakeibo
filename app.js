@@ -249,10 +249,22 @@ async function addSharedComment() {
     alert('通信エラー: ' + err.message);
     return;
   }
+
+  // 追加直後にUIへ即時反映
+  const scList = document.getElementById('sc-list');
+  if (!scList.querySelector('.sc-item')) scList.innerHTML = '';
+  scList.insertAdjacentHTML('beforeend', `
+    <div class="sc-item">
+      <div class="sc-item-body">
+        <div class="sc-item-text">${escHtml(text)}</div>
+        <div class="sc-item-expiry">${expiry ? '期限：' + expiry : '期限なし'}</div>
+      </div>
+      <button class="sc-item-del" onclick="deleteSharedComment('${id}')">×</button>
+    </div>`);
+
   document.getElementById('sc-inp-text').value = '';
   showToast('コメントを追加しました ✓');
-  await new Promise(r => setTimeout(r, 2000));
-  await renderScList();
+  setTimeout(renderScList, 3000);
 }
 
 async function deleteSharedComment(id) {
