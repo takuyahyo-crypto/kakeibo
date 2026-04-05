@@ -329,6 +329,114 @@ input, textarea { font-family: inherit; }
   100% { transform: translateX(-100%); }
 }
 
+/* 共有コメントティッカー */
+.shared-ticker-wrap {
+  display: flex;
+  align-items: center;
+  background: #FFF8E1;
+  border-radius: 10px;
+  margin: 8px 12px 0;
+  padding: 8px 10px;
+  gap: 8px;
+  overflow: hidden;
+}
+.shared-ticker {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 6px;
+  overflow: hidden;
+}
+.shared-ticker-icon { font-size: 14px; flex-shrink: 0; }
+.shared-ticker-track {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.shared-ticker-track span {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #E65100;
+  animation: weather-scroll 12s linear infinite;
+}
+.shared-ticker-edit {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 2px 4px;
+}
+.shared-add-btn-wrap {
+  margin: 8px 12px 0;
+}
+.shared-add-btn {
+  width: 100%;
+  padding: 8px;
+  background: #FFF8E1;
+  border: 1.5px dashed #FFB300;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #E65100;
+  cursor: pointer;
+}
+
+/* 共有コメント管理 */
+.sc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.sc-form input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  background: var(--bg);
+}
+.sc-form input[type="text"]:focus { border-color: var(--green); }
+.sc-form-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sc-label { font-size: 13px; font-weight: 600; color: var(--sub); white-space: nowrap; }
+.sc-form input[type="date"] {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+  background: var(--bg);
+}
+.sc-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.sc-item:last-child { border-bottom: none; }
+.sc-item-body { flex: 1; }
+.sc-item-text   { font-size: 14px; font-weight: 600; color: var(--text); }
+.sc-item-expiry { font-size: 11px; color: var(--sub); margin-top: 2px; }
+.sc-item-del {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  font-size: 14px;
+  color: var(--sub);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .summary-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

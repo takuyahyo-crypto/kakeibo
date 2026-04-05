@@ -152,11 +152,128 @@ function startPolling(code) {
     return;
   }
   fetchTransactions().then(() => checkAndAddFixedCosts()); // 即時取得＋固定費チェック
-  state.pollTimer = setInterval(fetchTransactions, 10000); // 10秒ごと
+  fetchSharedComments();
+  state.pollTimer = setInterval(() => { fetchTransactions(); fetchSharedComments(); }, 10000);
 }
 
 function stopPolling() {
   if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+}
+
+// ════════════════════════════════
+// 共有コメント
+// ════════════════════════════════
+let sharedCommentTimer = null;
+
+async function fetchSharedComments() {
+  if (!state.scriptUrl || !state.householdCode) return;
+  try {
+    const url = new URL(state.scriptUrl);
+    url.searchParams.set('action', 'getComments');
+    url.searchParams.set('code', state.householdCode);
+    const res  = await fetch(url.toString());
+    const json = await res.json();
+    if (!Array.isArray(json)) return;
+    renderSharedTicker(json);
+  } catch { /* 無視 */ }
+}
+
+function renderSharedTicker(comments) {
+  const wrap    = document.getElementById('shared-ticker-wrap');
+  const addWrap = document.getElementById('shared-add-btn-wrap');
+  const el      = document.getElementById('shared-ticker-text');
+  if (!wrap || !el) return;
+
+  if (!comments.length) {
+    wrap.classList.add('hidden');
+    addWrap.classList.remove('hidden');
+    return;
+  }
+  addWrap.classList.add('hidden');
+  wrap.classList.remove('hidden');
+
+  if (sharedCommentTimer) clearInterval(sharedCommentTimer);
+  let idx = 0;
+  function show() {
+    el.style.animation = 'none';
+    el.textContent = comments[idx % comments.length].text;
+    void el.offsetWidth;
+    el.style.animation = '';
+    idx++;
+  }
+  show();
+  sharedCommentTimer = setInterval(show, 12000);
+}
+
+function openSharedComments() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  document.getElementById('sc-inp-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.getElementById('sc-inp-text').value = '';
+  renderScList();
+  document.getElementById('shared-comments-modal').classList.remove('hidden');
+}
+
+function closeSharedComments() {
+  document.getElementById('shared-comments-modal').classList.add('hidden');
+  fetchSharedComments();
+}
+
+async function addSharedComment() {
+  const text   = document.getElementById('sc-inp-text').value.trim();
+  const expiry = document.getElementById('sc-inp-date').value;
+  if (!text) { alert('コメントを入力してください'); return; }
+  if (!state.scriptUrl) return;
+
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const url = new URL(state.scriptUrl);
+  url.searchParams.set('action',    'addComment');
+  url.searchParams.set('code',      state.householdCode);
+  url.searchParams.set('id',        id);
+  url.searchParams.set('text',      text);
+  url.searchParams.set('expiry',    expiry);
+  url.searchParams.set('createdAt', new Date().toISOString());
+  await fetch(url.toString());
+  document.getElementById('sc-inp-text').value = '';
+  renderScList();
+  showToast('コメントを追加しました ✓');
+}
+
+async function deleteSharedComment(id) {
+  if (!confirm('このコメントを削除しますか？')) return;
+  const url = new URL(state.scriptUrl);
+  url.searchParams.set('action', 'deleteComment');
+  url.searchParams.set('code',   state.householdCode);
+  url.searchParams.set('id',     id);
+  await fetch(url.toString());
+  renderScList();
+}
+
+async function renderScList() {
+  const el = document.getElementById('sc-list');
+  el.innerHTML = '<div style="text-align:center;padding:8px;color:#999;font-size:13px">読み込み中...</div>';
+  if (!state.scriptUrl) return;
+  try {
+    const url = new URL(state.scriptUrl);
+    url.searchParams.set('action', 'getComments');
+    url.searchParams.set('code',   state.householdCode);
+    const res  = await fetch(url.toString());
+    const json = await res.json();
+    if (!Array.isArray(json) || !json.length) {
+      el.innerHTML = '<div style="text-align:center;padding:16px;color:#999;font-size:13px">登録されているコメントはありません</div>';
+      return;
+    }
+    el.innerHTML = json.map(c => `
+      <div class="sc-item">
+        <div class="sc-item-body">
+          <div class="sc-item-text">${escHtml(c.text)}</div>
+          <div class="sc-item-expiry">${c.expiry ? `期限：${c.expiry}` : '期限なし'}</div>
+        </div>
+        <button class="sc-item-del" onclick="deleteSharedComment('${c.id}')">×</button>
+      </div>`).join('');
+  } catch {
+    el.innerHTML = '<div style="text-align:center;padding:8px;color:#999;font-size:13px">取得できませんでした</div>';
+  }
 }
 
 // ════════════════════════════════
@@ -707,6 +824,9 @@ function bindEvents() {
   document.getElementById('modal-backdrop').addEventListener('click', closeShareModal);
   document.getElementById('btn-close-payer-detail').addEventListener('click', closePayerDetail);
   document.getElementById('payer-detail-backdrop').addEventListener('click', closePayerDetail);
+  document.getElementById('btn-sc-add').addEventListener('click', addSharedComment);
+  document.getElementById('btn-close-shared-comments').addEventListener('click', closeSharedComments);
+  document.getElementById('shared-comments-backdrop').addEventListener('click', closeSharedComments);
   document.getElementById('btn-copy-code').addEventListener('click', () => {
     navigator.clipboard.writeText(state.householdCode)
       .then(() => showToast('コードをコピーしました ✓'))

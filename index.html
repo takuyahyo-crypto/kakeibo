@@ -77,6 +77,21 @@
         <div class="weather-loading">天気を取得中...</div>
       </div>
 
+      <!-- 共有コメントティッカー -->
+      <div class="shared-ticker-wrap hidden" id="shared-ticker-wrap">
+        <div class="shared-ticker">
+          <span class="shared-ticker-icon">💬</span>
+          <div class="shared-ticker-track">
+            <span id="shared-ticker-text"></span>
+          </div>
+        </div>
+        <button class="shared-ticker-edit" onclick="openSharedComments()" aria-label="編集">✏️</button>
+      </div>
+      <!-- コメントがない時の追加ボタン -->
+      <div class="shared-add-btn-wrap" id="shared-add-btn-wrap">
+        <button class="shared-add-btn" onclick="openSharedComments()">💬 共有コメントを追加</button>
+      </div>
+
       <div class="summary-row">
         <div class="summary-card">
           <div class="summary-label">今月の支出</div>
@@ -208,6 +223,27 @@
       グラフ
     </button>
   </nav>
+</div>
+
+<!-- 共有コメント管理モーダル -->
+<div id="shared-comments-modal" class="modal hidden">
+  <div class="modal-backdrop" id="shared-comments-backdrop"></div>
+  <div class="modal-card payer-detail-card">
+    <div class="modal-title" style="margin-bottom:14px">💬 共有コメント</div>
+    <!-- 追加フォーム -->
+    <div class="sc-form">
+      <input type="text" id="sc-inp-text" placeholder="コメントを入力（例：来週日曜に出かける）" maxlength="50">
+      <div class="sc-form-row">
+        <label class="sc-label">表示期限</label>
+        <input type="date" id="sc-inp-date">
+      </div>
+      <button class="btn-primary full" id="btn-sc-add">追加する</button>
+    </div>
+    <!-- 登録済みコメント一覧 -->
+    <div class="payer-detail-section-label">登録済みコメント</div>
+    <div id="sc-list"></div>
+    <button class="btn-ghost full" id="btn-close-shared-comments" style="margin-top:8px">閉じる</button>
+  </div>
 </div>
 
 <!-- 支払い内訳モーダル -->

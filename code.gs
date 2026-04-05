@@ -18,7 +18,7 @@ function doGet(e) {
     const action = p.action || 'get';
     const code   = p.code   || '';
 
-    if (!code) return jsonRes({ error: 'codeが必要です' });
+    if (!code && action !== 'news') return jsonRes({ error: 'codeが必要です' });
 
     switch (action) {
       case 'get':
@@ -31,6 +31,18 @@ function doGet(e) {
       case 'delete':
         deleteTransaction(code, p.id);
         return jsonRes({ ok: true });
+
+      case 'news':
+        return jsonRes(getNews());
+
+      case 'getComments':
+        return jsonRes(getComments(code));
+
+      case 'addComment':
+        return jsonRes(addComment(code, p));
+
+      case 'deleteComment':
+        return jsonRes(deleteComment(code, p.id));
 
       default:
         return jsonRes({ error: '不明なアクション' });
@@ -105,6 +117,71 @@ function deleteTransaction(code, id) {
       break;
     }
   }
+}
+
+// ──────────────────────────────────────────────────
+//  ニュース取得（NHK RSSから最新5件）
+// ──────────────────────────────────────────────────
+function getNews() {
+  try {
+    const xml  = UrlFetchApp.fetch('https://www3.nhk.or.jp/rss/news/cat0.xml').getContentText();
+    const doc  = XmlService.parse(xml);
+    const items = doc.getRootElement()
+                     .getChild('channel')
+                     .getChildren('item');
+    return items.slice(0, 5).map(item => ({
+      title: item.getChildText('title'),
+    }));
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+// ──────────────────────────────────────────────────
+//  共有コメント
+// ──────────────────────────────────────────────────
+const COMMENT_SHEET = 'comments';
+const COMMENT_HEADERS = ['householdCode', 'id', 'text', 'expiry', 'createdAt'];
+
+function getCommentSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(COMMENT_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(COMMENT_SHEET);
+    sheet.appendRow(COMMENT_HEADERS);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getComments(code) {
+  const sheet = getCommentSheet();
+  const rows  = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  return rows.slice(1)
+    .filter(row => row[0] === code)
+    .map(row => ({ id: row[1], text: row[2], expiry: row[3] ? String(row[3]).slice(0,10) : '', createdAt: row[4] }))
+    .filter(c => !c.expiry || new Date(c.expiry + 'T23:59:59') >= today);
+}
+
+function addComment(code, p) {
+  const sheet = getCommentSheet();
+  sheet.appendRow([code, p.id, p.text, p.expiry || '', p.createdAt || new Date().toISOString()]);
+  return { ok: true };
+}
+
+function deleteComment(code, id) {
+  const sheet = getCommentSheet();
+  const rows  = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (rows[i][0] === code && rows[i][1] === id) {
+      sheet.deleteRow(i + 1);
+      break;
+    }
+  }
+  return { ok: true };
 }
 
 // ──────────────────────────────────────────────────
