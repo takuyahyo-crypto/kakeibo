@@ -203,6 +203,11 @@ input, textarea { font-family: inherit; }
   position: absolute;
   right: 12px;
 }
+#btn-comment {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+}
 
 /* タブコンテンツ */
 .tab-content {
@@ -359,32 +364,6 @@ input, textarea { font-family: inherit; }
   font-weight: 600;
   color: #E65100;
   animation: weather-scroll 12s linear infinite;
-}
-.shared-ticker-edit {
-  background: none;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 8px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-.shared-add-btn-wrap {
-  margin: 8px 12px 0;
-}
-.shared-add-btn {
-  width: 100%;
-  padding: 10px 8px;
-  background: #FFF8E1;
-  border: 1.5px dashed #FFB300;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #E65100;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(255,179,0,0.2);
 }
 
 /* 共有コメント管理 */

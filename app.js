@@ -179,17 +179,14 @@ async function fetchSharedComments() {
 }
 
 function renderSharedTicker(comments) {
-  const wrap    = document.getElementById('shared-ticker-wrap');
-  const addWrap = document.getElementById('shared-add-btn-wrap');
-  const el      = document.getElementById('shared-ticker-text');
+  const wrap = document.getElementById('shared-ticker-wrap');
+  const el   = document.getElementById('shared-ticker-text');
   if (!wrap || !el) return;
 
   if (!comments.length) {
     wrap.classList.add('hidden');
-    addWrap.classList.remove('hidden');
     return;
   }
-  addWrap.classList.add('hidden');
   wrap.classList.remove('hidden');
 
   if (sharedCommentTimer) clearInterval(sharedCommentTimer);
