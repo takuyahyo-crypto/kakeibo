@@ -679,6 +679,41 @@ input, textarea { font-family: inherit; }
 }
 .cat-btn.sel .cl { color: var(--green-dark); font-weight: 700; }
 
+/* 電卓 */
+.calc-expr {
+  font-size: 13px;
+  color: var(--sub);
+  font-weight: 600;
+  min-height: 18px;
+  margin-top: 4px;
+  padding-left: 4px;
+}
+.calc-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.calc-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  transition: background .15s;
+}
+.calc-btn:active { background: var(--border); }
+.calc-btn-eq {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+  font-size: 18px;
+}
+.calc-btn-eq:active { background: var(--green-dark); }
+
 .btn-primary.full { margin-top: 4px; }
 
 /* ════════════════════════════════

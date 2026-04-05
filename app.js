@@ -494,6 +494,34 @@ function selectCat(id) {
 }
 
 
+// ════════════════════════════════
+// 電卓機能
+// ════════════════════════════════
+let calcState = { val: null, op: null };
+
+function calcOp(op) {
+  const cur = parseFloat(document.getElementById('inp-amount').value) || 0;
+  if (calcState.op && calcState.val !== null) {
+    const result = calcState.op === '+' ? calcState.val + cur : calcState.val - cur;
+    document.getElementById('inp-amount').value = result;
+    calcState.val = result;
+  } else {
+    calcState.val = cur;
+  }
+  calcState.op = op;
+  const sign = op === '+' ? '＋' : '－';
+  document.getElementById('calc-expr').textContent = `¥${calcState.val.toLocaleString('ja-JP')} ${sign}`;
+}
+
+function calcEq() {
+  if (calcState.op === null || calcState.val === null) return;
+  const cur = parseFloat(document.getElementById('inp-amount').value) || 0;
+  const result = calcState.op === '+' ? calcState.val + cur : calcState.val - cur;
+  document.getElementById('inp-amount').value = Math.max(0, result);
+  document.getElementById('calc-expr').textContent = '';
+  calcState = { val: null, op: null };
+}
+
 function selectPayer(name) {
   state.selectedPayer = name;
   document.getElementById('payer-takuya').classList.toggle('sel', name === '卓哉');
@@ -534,6 +562,8 @@ async function submitAdd() {
   // リセット
   document.getElementById('inp-amount').value = '';
   document.getElementById('inp-memo').value   = '';
+  document.getElementById('calc-expr').textContent = '';
+  calcState = { val: null, op: null };
   document.getElementById('inp-date').value   = today();
   state.selectedCat   = 'food';
 
