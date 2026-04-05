@@ -205,11 +205,18 @@ function renderSharedTicker(comments) {
   sharedCommentTimer = setInterval(show, 12000);
 }
 
+function toggleExpiry(cb) {
+  document.getElementById('sc-inp-date').disabled = cb.checked;
+  if (cb.checked) document.getElementById('sc-inp-date').value = '';
+}
+
 function openSharedComments() {
   const d = new Date();
   d.setDate(d.getDate() + 7);
   document.getElementById('sc-inp-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.getElementById('sc-inp-date').disabled = false;
   document.getElementById('sc-inp-text').value = '';
+  document.getElementById('sc-no-expiry').checked = false;
   renderScList();
   document.getElementById('shared-comments-modal').classList.remove('hidden');
 }
@@ -235,8 +242,9 @@ async function addSharedComment() {
   url.searchParams.set('createdAt', new Date().toISOString());
   await fetch(url.toString());
   document.getElementById('sc-inp-text').value = '';
-  renderScList();
   showToast('コメントを追加しました ✓');
+  await new Promise(r => setTimeout(r, 800));
+  await renderScList();
 }
 
 async function deleteSharedComment(id) {
@@ -246,7 +254,8 @@ async function deleteSharedComment(id) {
   url.searchParams.set('code',   state.householdCode);
   url.searchParams.set('id',     id);
   await fetch(url.toString());
-  renderScList();
+  await new Promise(r => setTimeout(r, 800));
+  await renderScList();
 }
 
 async function renderScList() {
