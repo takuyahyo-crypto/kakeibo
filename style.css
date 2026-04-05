@@ -370,6 +370,8 @@ input, textarea { font-family: inherit; }
 }
 .shared-add-btn-wrap {
   margin: 8px 12px 0;
+  position: relative;
+  z-index: 1;
 }
 .shared-add-btn {
   width: 100%;
@@ -843,15 +845,14 @@ input, textarea { font-family: inherit; }
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  pointer-events: none;
-}
-.modal:not(.hidden) {
-  pointer-events: auto;
 }
 .modal-backdrop {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,.4);
+}
+.modal.hidden .modal-backdrop {
+  display: none;
 }
 .modal-card {
   position: relative;
