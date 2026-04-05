@@ -38,7 +38,7 @@ body {
 button { font-family: inherit; cursor: pointer; }
 input, textarea { font-family: inherit; }
 
-.hidden { display: none !important; }
+.hidden { display: none !important; pointer-events: none !important; }
 
 /* ════════════════════════════════
    セットアップ画面
@@ -406,6 +406,7 @@ input, textarea { font-family: inherit; }
   gap: 10px;
 }
 .sc-label { font-size: 13px; font-weight: 600; color: var(--sub); white-space: nowrap; }
+.sc-no-expiry-label { font-size: 12px; color: var(--sub); display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; }
 .sc-form input[type="date"] {
   flex: 1;
   padding: 8px 10px;
