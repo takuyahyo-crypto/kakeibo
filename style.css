@@ -339,6 +339,8 @@ input, textarea { font-family: inherit; }
   padding: 8px 10px;
   gap: 8px;
   overflow: hidden;
+  position: relative;
+  z-index: 10;
 }
 .shared-ticker {
   display: flex;
@@ -846,13 +848,14 @@ input, textarea { font-family: inherit; }
   align-items: flex-end;
   justify-content: center;
 }
+.modal.hidden {
+  display: none !important;
+  z-index: -1 !important;
+}
 .modal-backdrop {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,.4);
-}
-.modal.hidden .modal-backdrop {
-  display: none;
 }
 .modal-card {
   position: relative;
