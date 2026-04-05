@@ -207,9 +207,8 @@ input, textarea { font-family: inherit; }
 /* タブコンテンツ */
 .tab-content {
   flex: 1;
-  overflow: visible;
+  overflow: hidden;
   position: relative;
-  min-height: 0;
 }
 
 .tab-pane {
@@ -217,7 +216,7 @@ input, textarea { font-family: inherit; }
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   padding: 12px 0 8px;
 }
 .tab-pane.active { display: block; }
@@ -340,8 +339,6 @@ input, textarea { font-family: inherit; }
   padding: 8px 10px;
   gap: 8px;
   overflow: hidden;
-  position: relative;
-  z-index: 10;
 }
 .shared-ticker {
   display: flex;
@@ -369,16 +366,16 @@ input, textarea { font-family: inherit; }
   font-size: 16px;
   cursor: pointer;
   flex-shrink: 0;
-  padding: 2px 4px;
+  padding: 8px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .shared-add-btn-wrap {
   margin: 8px 12px 0;
-  position: relative;
-  z-index: 1;
 }
 .shared-add-btn {
   width: 100%;
-  padding: 8px;
+  padding: 10px 8px;
   background: #FFF8E1;
   border: 1.5px dashed #FFB300;
   border-radius: 10px;
@@ -386,6 +383,8 @@ input, textarea { font-family: inherit; }
   font-weight: 600;
   color: #E65100;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255,179,0,0.2);
 }
 
 /* 共有コメント管理 */
@@ -851,7 +850,7 @@ input, textarea { font-family: inherit; }
 }
 .modal.hidden {
   display: none !important;
-  z-index: -1 !important;
+  pointer-events: none !important;
 }
 .modal-backdrop {
   position: absolute;

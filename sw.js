@@ -1,5 +1,5 @@
 // Service Worker — オフライン対応
-const CACHE = 'kakeibo-v3';
+const CACHE = 'kakeibo-v4';
 const ASSETS = [
   './',
   './index.html',
