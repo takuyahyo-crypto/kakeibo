@@ -240,7 +240,12 @@ async function addSharedComment() {
   url.searchParams.set('text',      text);
   url.searchParams.set('expiry',    expiry);
   url.searchParams.set('createdAt', new Date().toISOString());
-  await fetch(url.toString());
+  const res = await fetch(url.toString());
+  const json = await res.json();
+  if (!json || json.error) {
+    alert('保存エラー: ' + (json?.error || '不明なエラー'));
+    return;
+  }
   document.getElementById('sc-inp-text').value = '';
   showToast('コメントを追加しました ✓');
   await new Promise(r => setTimeout(r, 800));
