@@ -38,7 +38,7 @@ body {
 button { font-family: inherit; cursor: pointer; }
 input, textarea { font-family: inherit; }
 
-.hidden { display: none !important; pointer-events: none !important; }
+.hidden { display: none !important; }
 
 /* ════════════════════════════════
    セットアップ画面
@@ -843,6 +843,10 @@ input, textarea { font-family: inherit; }
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  pointer-events: none;
+}
+.modal:not(.hidden) {
+  pointer-events: auto;
 }
 .modal-backdrop {
   position: absolute;
