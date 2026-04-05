@@ -207,8 +207,9 @@ input, textarea { font-family: inherit; }
 /* タブコンテンツ */
 .tab-content {
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
+  min-height: 0;
 }
 
 .tab-pane {
