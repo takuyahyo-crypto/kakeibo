@@ -230,6 +230,10 @@ async function addSharedComment() {
   if (!text) { alert('コメントを入力してください'); return; }
   if (!state.scriptUrl) return;
 
+  const btn = document.getElementById('btn-sc-add');
+  btn.disabled = true;
+  btn.textContent = '保存中...';
+
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const url = new URL(state.scriptUrl);
   url.searchParams.set('action',    'addComment');
@@ -242,10 +246,14 @@ async function addSharedComment() {
     const res = await fetch(url.toString());
     const json = await res.json();
     if (!json || json.error) {
+      btn.disabled = false;
+      btn.textContent = '追加する';
       alert('保存エラー: ' + (json?.error || '不明なエラー'));
       return;
     }
   } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '追加する';
     alert('通信エラー: ' + err.message);
     return;
   }
@@ -262,6 +270,8 @@ async function addSharedComment() {
       <button class="sc-item-del" onclick="deleteSharedComment('${id}')">×</button>
     </div>`);
 
+  btn.disabled = false;
+  btn.textContent = '追加する';
   document.getElementById('sc-inp-text').value = '';
   showToast('コメントを追加しました ✓');
 }
