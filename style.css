@@ -366,8 +366,8 @@ input, textarea { font-family: inherit; }
   animation: shared-scroll 14s linear infinite;
 }
 @keyframes shared-scroll {
-  0%   { transform: translateX(0%); }
-  100% { transform: translateX(-200%); }
+  0%   { transform: translateX(100vw); }
+  100% { transform: translateX(-100%); }
 }
 
 /* 共有コメント管理 */
