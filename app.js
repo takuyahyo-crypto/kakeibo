@@ -171,7 +171,8 @@ async function fetchSharedComments() {
     const url = new URL(state.scriptUrl);
     url.searchParams.set('action', 'getComments');
     url.searchParams.set('code', state.householdCode);
-    const res  = await fetch(url.toString());
+    url.searchParams.set('t', Date.now());
+    const res  = await fetch(url.toString(), { cache: 'no-store' });
     const json = await res.json();
     if (!Array.isArray(json)) return;
     renderSharedTicker(json);
@@ -237,15 +238,20 @@ async function addSharedComment() {
   url.searchParams.set('text',      text);
   url.searchParams.set('expiry',    expiry);
   url.searchParams.set('createdAt', new Date().toISOString());
-  const res = await fetch(url.toString());
-  const json = await res.json();
-  if (!json || json.error) {
-    alert('保存エラー: ' + (json?.error || '不明なエラー'));
+  try {
+    const res = await fetch(url.toString());
+    const json = await res.json();
+    if (!json || json.error) {
+      alert('保存エラー: ' + (json?.error || '不明なエラー'));
+      return;
+    }
+  } catch (err) {
+    alert('通信エラー: ' + err.message);
     return;
   }
   document.getElementById('sc-inp-text').value = '';
   showToast('コメントを追加しました ✓');
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise(r => setTimeout(r, 2000));
   await renderScList();
 }
 
@@ -268,7 +274,8 @@ async function renderScList() {
     const url = new URL(state.scriptUrl);
     url.searchParams.set('action', 'getComments');
     url.searchParams.set('code',   state.householdCode);
-    const res  = await fetch(url.toString());
+    url.searchParams.set('t', Date.now());
+    const res  = await fetch(url.toString(), { cache: 'no-store' });
     const json = await res.json();
     if (!Array.isArray(json) || !json.length) {
       el.innerHTML = '<div style="text-align:center;padding:16px;color:#999;font-size:13px">登録されているコメントはありません</div>';
