@@ -2,9 +2,9 @@
    変数
 ════════════════════════════════ */
 :root {
-  --green:      #4CAF50;
-  --green-dark: #388E3C;
-  --green-bg:   #E8F5E9;
+  --green:      #2196F3;
+  --green-dark: #1565C0;
+  --green-bg:   #E3F2FD;
   --red:        #F44336;
   --bg:         #F5F5F5;
   --card:       #FFFFFF;
@@ -280,11 +280,11 @@ input, textarea { font-family: inherit; }
 /* 天気カード */
 .weather-card {
   margin: 12px 12px 0;
-  background: linear-gradient(135deg, #42a5f5, #1565c0);
+  background: linear-gradient(135deg, #66BB6A, #26C6DA);
   border-radius: 14px;
   padding: 14px 16px;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(21,101,192,.3);
+  box-shadow: 0 2px 8px rgba(102,187,106,.3);
 }
 .weather-slots {
   display: flex;
@@ -815,7 +815,7 @@ input, textarea { font-family: inherit; }
   margin: 4px 0 16px;
 }
 .savings-summary-inner {
-  background: #E8F5E9;
+  background: #E3F2FD;
   border-radius: 14px;
   padding: 14px 32px;
   text-align: center;
@@ -969,7 +969,7 @@ input, textarea { font-family: inherit; }
 
 .budget-savings {
   margin-top: 12px;
-  background: #E8F5E9;
+  background: #E3F2FD;
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
