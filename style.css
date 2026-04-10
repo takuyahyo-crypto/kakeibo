@@ -992,6 +992,60 @@ input, textarea { font-family: inherit; }
 .budget-savings.over .budget-savings-note   { color: #E65100; }
 
 /* ════════════════════════════════
+   光熱費カード
+════════════════════════════════ */
+.utilities-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 0 12px 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.utilities-card:empty { display: none; }
+.util-header { margin-bottom: 12px; }
+.util-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.util-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.util-total-row, .util-half-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.util-total-label {
+  font-size: 13px;
+  color: var(--sub);
+  font-weight: 600;
+}
+.util-total-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.util-half-row {
+  background: #E8F5E9;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.util-half-label {
+  font-size: 13px;
+  color: #388E3C;
+  font-weight: 700;
+}
+.util-half-amount {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1B5E20;
+  letter-spacing: -.5px;
+}
+
+/* ════════════════════════════════
    支払い内訳モーダル
 ════════════════════════════════ */
 .payer-detail-card {

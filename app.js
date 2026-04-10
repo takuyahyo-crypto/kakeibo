@@ -409,6 +409,32 @@ function renderBudget(txs) {
 }
 
 // ════════════════════════════════
+// 光熱費カード
+// ════════════════════════════════
+const UTILITIES = ['internet', 'electricity', 'gas', 'water'];
+
+function renderUtilities(txs) {
+  const total = txs
+    .filter(t => UTILITIES.includes(t.category))
+    .reduce((s, t) => s + t.amount, 0);
+  const half = Math.round(total / 2);
+  document.getElementById('utilities-card').innerHTML = `
+    <div class="util-header">
+      <span class="util-title">💡 光熱費（ネット・電気・ガス・水道）</span>
+    </div>
+    <div class="util-body">
+      <div class="util-total-row">
+        <span class="util-total-label">今月合計</span>
+        <span class="util-total-amount">${fmt(total)}</span>
+      </div>
+      <div class="util-half-row">
+        <span class="util-half-label">ひとり分（÷2）</span>
+        <span class="util-half-amount">${fmt(half)}</span>
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════
 // 固定費自動入力
 // ════════════════════════════════
 const FIXED_COSTS = [
@@ -467,6 +493,7 @@ function renderHome() {
     fmt(txs.filter(t => t.payer === '由美子').reduce((s, t) => s + t.amount, 0));
 
   renderBudget(txs);
+  renderUtilities(txs);
 
   const list   = document.getElementById('home-tx-list');
   const recent = txs.slice(0, 5);
