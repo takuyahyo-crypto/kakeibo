@@ -35,12 +35,21 @@ const state = {
   pollTimer: null,
   charts: { pie: null, savings: null },
   scriptUrl: '',
+  events: [],
+  selectedEvtDay: null,
+  selectedEvtWho: 'takuya',
+  editingEventId: null,
 };
 
 // ════════════════════════════════
 // ユーティリティ
 // ════════════════════════════════
 const fmt = n => '¥' + Number(n).toLocaleString('ja-JP');
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
 function monthLabel(ym) {
   const [y, m] = ym.split('-');
@@ -153,7 +162,8 @@ function startPolling(code) {
   }
   fetchTransactions().then(() => checkAndAddFixedCosts()); // 即時取得＋固定費チェック
   fetchSharedComments();
-  state.pollTimer = setInterval(() => { fetchTransactions(); fetchSharedComments(); }, 10000);
+  fetchEvents();
+  state.pollTimer = setInterval(() => { fetchTransactions(); fetchSharedComments(); fetchEvents(); }, 10000);
 }
 
 function stopPolling() {
@@ -177,7 +187,7 @@ async function fetchSharedComments() {
     const res  = await fetch(url.toString(), { cache: 'no-store' });
     const json = await res.json();
     if (!Array.isArray(json)) return;
-    renderSharedTicker(json);
+    renderSharedTickerWithEvents(json);
   } catch { /* 無視 */ }
 }
 
@@ -345,7 +355,8 @@ function switchTab(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   document.querySelector(`.nav-btn[data-tab="${name}"]`).classList.add('active');
-  if (name === 'chart') renderCharts();
+  if (name === 'calendar') renderCalendar();
+  if (name === 'report') renderReport();
 }
 
 function changeMonth(delta) {
@@ -362,7 +373,9 @@ function renderAll() {
   document.getElementById('header-month').textContent = monthLabel(state.currentMonth);
   renderHome();
   renderHistory();
-  if (document.getElementById('tab-chart').classList.contains('active')) renderCharts();
+  if (document.getElementById('tab-calendar').classList.contains('active')) renderCalendar();
+  if (document.getElementById('tab-report').classList.contains('active')) renderReport();
+  updateCalBadge();
 }
 
 // ════════════════════════════════
@@ -690,7 +703,7 @@ async function confirmDelete(id) {
 // ════════════════════════════════
 // グラフ
 // ════════════════════════════════
-function renderCalendar(txs) {
+function renderDailyCalendar(txs) {
   const [y, m] = state.currentMonth.split('-').map(Number);
   const daysInMonth  = new Date(y, m, 0).getDate();
   const firstDayOfWeek = new Date(y, m - 1, 1).getDay(); // 0=日
@@ -813,7 +826,7 @@ function renderSavingsHistory() {
 function renderCharts() {
   const txs = monthTxs();
 
-  renderCalendar(txs);
+  renderDailyCalendar(txs);
   renderSavingsHistory();
 
   const catMap = {};
@@ -1146,6 +1159,371 @@ function init() {
     document.getElementById('main-screen').classList.remove('hidden');
     startPolling(state.householdCode);
   }
+}
+
+// ════════════════════════════════
+// カレンダー機能
+// ════════════════════════════════
+const WHO_COLORS = { takuya: '#2196F3', yumiko: '#E91E63', both: '#9C27B0' };
+const WHO_LABELS = { takuya: '👨 卓哉', yumiko: '👩 由美子', both: '👫 二人' };
+const REPEAT_LABELS = { weekly: '毎週', monthly: '毎月' };
+
+async function fetchEvents() {
+  if (!state.scriptUrl || !state.householdCode) return;
+  const data = await apiCall({ action: 'getEvents', code: state.householdCode });
+  if (Array.isArray(data)) {
+    state.events = data;
+    updateCalBadge();
+  }
+}
+
+function expandRepeats(events, ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const expanded = [];
+  events.forEach(evt => {
+    if (evt.repeat === 'none') {
+      if (evt.date.startsWith(ym)) expanded.push(evt);
+    } else if (evt.repeat === 'monthly') {
+      const day = parseInt(evt.date.slice(8));
+      if (day <= daysInMonth) {
+        expanded.push({ ...evt, date: `${ym}-${String(day).padStart(2,'0')}`, _repeatSource: evt.id });
+      }
+    } else if (evt.repeat === 'weekly') {
+      const srcDate = new Date(evt.date);
+      const dow = srcDate.getDay();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dt = new Date(y, m - 1, d);
+        if (dt.getDay() === dow && dt >= srcDate) {
+          expanded.push({ ...evt, date: `${ym}-${String(d).padStart(2,'0')}`, _repeatSource: evt.id });
+        }
+      }
+    }
+  });
+  return expanded;
+}
+
+function renderCalendar() {
+  const ym = state.currentMonth;
+  const [y, m] = ym.split('-').map(Number);
+  const firstDow = new Date(y, m - 1, 1).getDay();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const todayStr = today();
+  const expanded = expandRepeats(state.events, ym);
+
+  // 日ごとのイベントマップ
+  const dayEvents = {};
+  expanded.forEach(evt => {
+    const d = parseInt(evt.date.slice(8));
+    if (!dayEvents[d]) dayEvents[d] = [];
+    dayEvents[d].push(evt);
+  });
+
+  let html = '';
+  for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell cal-empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${ym}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const isSel = d === state.selectedEvtDay;
+    const evts = dayEvents[d] || [];
+    const whos = [...new Set(evts.map(e => e.who))];
+
+    html += `<div class="cal-cell${isToday ? ' cal-today' : ''}${isSel ? ' cal-selected' : ''}" onclick="selectCalDay(${d})" style="cursor:pointer${isSel ? ';background:var(--green-bg);border-radius:8px' : ''}">`;
+    html += `<div class="cal-day">${d}</div>`;
+    if (whos.length > 0) {
+      html += '<div style="display:flex;gap:2px;margin-top:2px">';
+      whos.forEach(w => html += `<span style="width:6px;height:6px;border-radius:50%;background:${WHO_COLORS[w] || '#999'}"></span>`);
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('cal-events-grid').innerHTML = html;
+
+  // 選択日の予定
+  renderDayEvents(dayEvents[state.selectedEvtDay] || [], state.selectedEvtDay);
+}
+
+function selectCalDay(d) {
+  state.selectedEvtDay = (state.selectedEvtDay === d) ? null : d;
+  renderCalendar();
+}
+
+function renderDayEvents(evts, day) {
+  const container = document.getElementById('cal-day-events');
+  if (!day) { container.innerHTML = ''; return; }
+
+  const ym = state.currentMonth;
+  const dateStr = `${ym}-${String(day).padStart(2,'0')}`;
+  const dt = new Date(dateStr + 'T00:00:00');
+  const dow = ['日','月','火','水','木','金','土'][dt.getDay()];
+  const [y,m] = ym.split('-').map(Number);
+
+  let html = `<div class="card" style="margin:12px"><div class="card-header">${m}月${day}日（${dow}）の予定</div>`;
+  if (evts.length === 0) {
+    html += '<div class="empty" style="padding:24px"><p>予定はありません</p></div>';
+  } else {
+    evts.forEach(evt => {
+      // 家計簿連携: 予算があればその日の支出を集計
+      let budgetHtml = '';
+      if (evt.budget > 0) {
+        const daySpent = state.transactions
+          .filter(t => t.date === dateStr)
+          .reduce((s, t) => s + t.amount, 0);
+        const remain = evt.budget - daySpent;
+        budgetHtml = daySpent > 0
+          ? `<div class="evt-budget">💰 予算 ${fmt(evt.budget)} → 残り ${fmt(remain)}</div>`
+          : `<div class="evt-budget">💰 予算 ${fmt(evt.budget)}</div>`;
+      }
+      const repeatTag = evt.repeat !== 'none' ? `<span class="evt-repeat-tag">🔁${REPEAT_LABELS[evt.repeat]}</span>` : '';
+      const memoHtml = evt.memo ? `<div class="evt-memo">📝 ${escapeHtml(evt.memo)}</div>` : '';
+
+      html += `<div class="evt-item">
+        <span class="evt-dot ${evt.who}"></span>
+        <div class="evt-body">
+          <div class="evt-title-row"><span class="evt-title${evt.done ? ' style="text-decoration:line-through;opacity:.5"' : ''}">${escapeHtml(evt.title)}</span>${repeatTag}</div>
+          <div class="evt-who">${WHO_LABELS[evt.who] || evt.who}</div>
+          ${budgetHtml}${memoHtml}
+        </div>
+        <div class="evt-actions">
+          <label class="evt-check"><input type="checkbox" ${evt.done ? 'checked' : ''} onchange="toggleEventDone('${evt.id}',this.checked)"> 完了</label>
+          <label class="evt-ticker-toggle"><input type="checkbox" ${evt.showTicker ? 'checked' : ''} onchange="toggleEventTicker('${evt.id}',this.checked)"> 📣</label>
+          <button class="evt-del" onclick="deleteEvent('${evt.id}')" title="削除">✕</button>
+        </div>
+      </div>`;
+    });
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function updateCalBadge() {
+  const badge = document.getElementById('cal-badge');
+  if (!badge) return;
+  const todayStr = today();
+  const expanded = expandRepeats(state.events, state.currentMonth);
+  const hasToday = expanded.some(e => e.date === todayStr && !e.done);
+  badge.classList.toggle('hidden', !hasToday);
+}
+
+// 予定の追加/編集モーダル
+function selectEvtWho(who) {
+  state.selectedEvtWho = who;
+  ['takuya','yumiko','both'].forEach(w => {
+    document.getElementById(`evt-who-${w}`).classList.toggle('sel', w === who);
+  });
+}
+
+function openAddEvent() {
+  state.editingEventId = null;
+  document.getElementById('event-modal-title').textContent = '予定を追加';
+  document.getElementById('evt-title').value = '';
+  document.getElementById('evt-date').value = state.selectedEvtDay
+    ? `${state.currentMonth}-${String(state.selectedEvtDay).padStart(2,'0')}`
+    : today();
+  selectEvtWho('takuya');
+  document.getElementById('evt-repeat').value = 'none';
+  document.getElementById('evt-budget').value = '';
+  document.getElementById('evt-memo').value = '';
+  document.getElementById('evt-ticker').checked = false;
+  document.getElementById('event-modal').classList.remove('hidden');
+}
+
+function closeEventModal() {
+  document.getElementById('event-modal').classList.add('hidden');
+}
+
+async function saveEvent() {
+  const title = document.getElementById('evt-title').value.trim();
+  if (!title) { document.getElementById('evt-title').focus(); return; }
+
+  // 保存中表示
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.querySelector('.loading-label').textContent = '保存中...';
+
+  const evt = {
+    id:         state.editingEventId || Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    title,
+    date:       document.getElementById('evt-date').value,
+    who:        state.selectedEvtWho,
+    budget:     document.getElementById('evt-budget').value || '0',
+    memo:       document.getElementById('evt-memo').value.trim(),
+    repeat:     document.getElementById('evt-repeat').value,
+    showTicker: String(document.getElementById('evt-ticker').checked),
+    done:       'false',
+    createdAt:  new Date().toISOString(),
+  };
+
+  if (state.scriptUrl) {
+    const action = state.editingEventId ? 'updateEvent' : 'addEvent';
+    await apiCall({ action, code: state.householdCode, ...evt });
+  }
+
+  document.getElementById('loading-overlay').classList.add('hidden');
+  closeEventModal();
+  await fetchEvents();
+  renderCalendar();
+  showToast('予定を保存しました ✓');
+}
+
+async function toggleEventDone(id, done) {
+  if (state.scriptUrl) {
+    await apiCall({ action: 'updateEvent', code: state.householdCode, id, done: String(done) });
+  }
+  const evt = state.events.find(e => e.id === id);
+  if (evt) evt.done = done;
+  renderCalendar();
+  updateCalBadge();
+}
+
+async function toggleEventTicker(id, show) {
+  if (state.scriptUrl) {
+    await apiCall({ action: 'updateEvent', code: state.householdCode, id, showTicker: String(show) });
+  }
+  const evt = state.events.find(e => e.id === id);
+  if (evt) evt.showTicker = show;
+}
+
+async function deleteEvent(id) {
+  if (!confirm('この予定を削除しますか？')) return;
+  if (state.scriptUrl) {
+    await apiCall({ action: 'deleteEvent', code: state.householdCode, id });
+  }
+  state.events = state.events.filter(e => e.id !== id);
+  renderCalendar();
+  updateCalBadge();
+}
+
+// ════════════════════════════════
+// ティッカーにカレンダー予定も流す
+// ════════════════════════════════
+const _origRenderSharedTicker = typeof renderSharedTicker === 'function' ? renderSharedTicker : null;
+
+function renderSharedTickerWithEvents(comments) {
+  // カレンダーのticker表示ONの予定を追加
+  const tickerEvents = expandRepeats(state.events, state.currentMonth)
+    .filter(e => e.showTicker && !e.done)
+    .map(e => ({
+      id: 'evt_' + e.id,
+      text: `📅 ${e.date.slice(5).replace('-','/')} ${e.title}（${WHO_LABELS[e.who]}）`,
+    }));
+
+  const all = [...(comments || []), ...tickerEvents];
+
+  // 元のティッカーロジックを使用
+  const wrap = document.getElementById('shared-ticker-wrap');
+  const textEl = document.getElementById('shared-ticker-text');
+  if (!wrap || !textEl) return;
+
+  sharedComments = all;
+  if (all.length === 0) {
+    wrap.classList.add('hidden');
+    if (sharedCommentTimer) { clearInterval(sharedCommentTimer); sharedCommentTimer = null; }
+    return;
+  }
+  wrap.classList.remove('hidden');
+  sharedCommentIdx = 0;
+  const show = () => {
+    const item = sharedComments[sharedCommentIdx % sharedComments.length];
+    textEl.textContent = item.text;
+    textEl.style.animation = 'none';
+    textEl.offsetHeight;
+    textEl.style.animation = '';
+    sharedCommentIdx++;
+  };
+  show();
+  if (!sharedCommentTimer) sharedCommentTimer = setInterval(show, 14000);
+}
+
+// ════════════════════════════════
+// 月間レポート
+// ════════════════════════════════
+function renderReport() {
+  const ym = state.currentMonth;
+  const txs = monthTxs();
+  const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
+
+  // 前月データ
+  const [y, m] = ym.split('-').map(Number);
+  const prevD = new Date(y, m - 2, 1);
+  const prevYm = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, '0')}`;
+  const prevTxs = state.transactions.filter(t => t.date.startsWith(prevYm));
+  const prevTotal = prevTxs.reduce((s, t) => s + t.amount, 0);
+
+  const diff = totalSpent - prevTotal;
+  const diffPct = prevTotal > 0 ? Math.round((diff / prevTotal) * 100) : 0;
+
+  // カテゴリ別集計（今月）
+  const catTotals = {};
+  txs.forEach(t => {
+    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+  });
+  const catSorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+
+  // カテゴリ別集計（前月）
+  const prevCatTotals = {};
+  prevTxs.forEach(t => {
+    prevCatTotals[t.category] = (prevCatTotals[t.category] || 0) + t.amount;
+  });
+
+  // 一番使ったカテゴリ
+  const topCat = catSorted.length > 0 ? CAT_MAP[catSorted[0][0]] : null;
+
+  // 由美子の貯金額
+  const foodDaily = txs.filter(t => t.payer === '由美子' && ['food','daily'].includes(t.category)).reduce((s,t) => s + t.amount, 0);
+  const utilHalf = Math.round(txs.filter(t => UTILITIES.includes(t.category)).reduce((s,t) => s + t.amount, 0) / 2);
+  const savings = BUDGET_BASE - (foodDaily + utilHalf + FIXED_SAVING);
+
+  let html = `<div class="report-card">
+    <div class="report-header">📊 ${monthLabel(ym)} レポート</div>
+    <div class="report-row">
+      <span class="report-label">今月の支出合計</span>
+      <span class="report-value">${fmt(totalSpent)}</span>
+    </div>
+    <div class="report-row">
+      <span class="report-label">前月（${monthLabel(prevYm)}）</span>
+      <span class="report-value">${fmt(prevTotal)}</span>
+    </div>
+    <div class="report-row">
+      <span class="report-label">前月比</span>
+      <span class="report-value ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'} ${fmt(Math.abs(diff))}（${diff > 0 ? '+' : ''}${diffPct}%）</span>
+    </div>`;
+
+  if (topCat) {
+    html += `<div class="report-row">
+      <span class="report-label">最も使ったカテゴリ</span>
+      <span class="report-value">${topCat.icon} ${topCat.label} ${fmt(catSorted[0][1])}</span>
+    </div>`;
+  }
+
+  // 由美子の貯金額は貯金履歴セクションで表示するため省略
+
+  // カテゴリ別内訳
+  html += '<div class="report-section">カテゴリ別内訳</div>';
+  catSorted.forEach(([catId, amount]) => {
+    const cat = CAT_MAP[catId] || { icon: '📂', label: catId };
+    const prevAmt = prevCatTotals[catId] || 0;
+    const catDiff = amount - prevAmt;
+    const diffStr = catDiff !== 0
+      ? `<span class="report-cat-diff ${catDiff > 0 ? 'up' : 'down'}">${catDiff > 0 ? '▲' : '▼'}${fmt(Math.abs(catDiff))}</span>`
+      : '<span class="report-cat-diff">±0</span>';
+
+    html += `<div class="report-cat-row">
+      <span class="report-cat-icon">${cat.icon}</span>
+      <span class="report-cat-name">${cat.label}</span>
+      <span class="report-cat-amount">${fmt(amount)}</span>
+      ${diffStr}
+    </div>`;
+  });
+
+  if (catSorted.length === 0) {
+    html += '<div class="empty" style="padding:24px"><p>まだ記録がありません</p></div>';
+  }
+
+  html += '</div>';
+  document.getElementById('report-content').innerHTML = html;
+
+  // グラフ・貯金履歴もレポートタブ内に描画
+  renderCharts();
 }
 
 document.addEventListener('DOMContentLoaded', init);

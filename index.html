@@ -180,8 +180,22 @@
       <div id="history-list"></div>
     </div>
 
-    <!-- グラフ -->
-    <div class="tab-pane" id="tab-chart">
+    <!-- カレンダー -->
+    <div class="tab-pane" id="tab-calendar">
+      <div class="card" style="margin-top:12px">
+        <div class="cal-week-header">
+          <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+        </div>
+        <div class="cal-body" id="cal-events-grid"></div>
+      </div>
+      <div id="cal-day-events"></div>
+      <button class="btn-primary full" id="btn-add-event" style="margin:0 12px 12px;width:calc(100% - 24px)" onclick="openAddEvent()">＋ 予定を追加</button>
+    </div>
+
+    <!-- 月間レポート -->
+    <div class="tab-pane" id="tab-report">
+      <div id="report-content"></div>
+      <!-- グラフ（レポートタブに統合） -->
       <div class="card">
         <div class="card-header">日別支出カレンダー</div>
         <div id="cal-grid"></div>
@@ -223,9 +237,14 @@
       <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
       履歴
     </button>
-    <button class="nav-btn" data-tab="chart">
-      <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
-      グラフ
+    <button class="nav-btn" data-tab="calendar">
+      <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>
+      <span class="nav-label">予定</span>
+      <span class="nav-badge hidden" id="cal-badge"></span>
+    </button>
+    <button class="nav-btn" data-tab="report">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      レポート
     </button>
   </nav>
 </div>
@@ -278,6 +297,50 @@
     <button class="btn-primary full" id="btn-copy-code">コードをコピー</button>
     <button class="btn-cache full" id="btn-clear-cache">🔄 アプリを最新版に更新</button>
     <button class="btn-ghost full" id="btn-close-modal">閉じる</button>
+  </div>
+</div>
+
+<!-- 予定追加/編集モーダル -->
+<div id="event-modal" class="modal hidden">
+  <div class="modal-backdrop" onclick="closeEventModal()"></div>
+  <div class="modal-card payer-detail-card">
+    <div class="modal-title" id="event-modal-title">予定を追加</div>
+    <div class="sc-form">
+      <input type="text" id="evt-title" placeholder="予定のタイトル" maxlength="50">
+      <input type="date" id="evt-date">
+      <div class="form-group" style="margin-bottom:0">
+        <label style="margin-bottom:4px">誰の予定？</label>
+        <div class="payer-grid" style="grid-template-columns:1fr 1fr 1fr">
+          <button class="payer-btn sel" id="evt-who-takuya" onclick="selectEvtWho('takuya')">👨 卓哉</button>
+          <button class="payer-btn" id="evt-who-yumiko" onclick="selectEvtWho('yumiko')">👩 由美子</button>
+          <button class="payer-btn" id="evt-who-both" onclick="selectEvtWho('both')">👫 二人</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>繰り返し</label>
+        <select id="evt-repeat" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:var(--bg)">
+          <option value="none">なし</option>
+          <option value="weekly">毎週</option>
+          <option value="monthly">毎月</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>予算（任意）</label>
+        <div class="amount-wrap">
+          <span class="yen-sign">¥</span>
+          <input type="number" id="evt-budget" placeholder="0" inputmode="numeric" min="0" style="font-size:18px;font-weight:600">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>メモ（任意）</label>
+        <input type="text" id="evt-memo" placeholder="持ち物、集合場所など">
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;padding:4px 0">
+        <input type="checkbox" id="evt-ticker"> 📣 ホームのティッカーに表示する
+      </label>
+      <button class="btn-primary full" id="btn-save-event" onclick="saveEvent()">保存する</button>
+    </div>
+    <button class="btn-ghost full" onclick="closeEventModal()" style="margin-top:4px">キャンセル</button>
   </div>
 </div>
 
