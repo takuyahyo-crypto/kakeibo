@@ -368,35 +368,46 @@ function renderAll() {
 // ════════════════════════════════
 // 予算アラート
 // ════════════════════════════════
-const BUDGET = { categories: ['food', 'daily'], limit: 75000 };
+const BUDGET_BASE = 100000;
+const FIXED_SAVING = 10000;
+const BUDGET_USABLE = BUDGET_BASE - FIXED_SAVING; // 90,000
 
 function renderBudget(txs) {
-  const used = txs
-    .filter(t => BUDGET.categories.includes(t.category))
+  // 由美子の食費+日用品
+  const foodDaily = txs
+    .filter(t => t.payer === '由美子' && ['food', 'daily'].includes(t.category))
     .reduce((s, t) => s + t.amount, 0);
-  const remaining = BUDGET.limit - used;
-  const ratio     = Math.min(used / BUDGET.limit, 1);
+  // 光熱費全体の半分
+  const utilitiesHalf = Math.round(
+    txs.filter(t => UTILITIES.includes(t.category))
+       .reduce((s, t) => s + t.amount, 0) / 2
+  );
+  const used = foodDaily + utilitiesHalf;
+  const remaining = BUDGET_USABLE - used;
+  const ratio     = Math.min(used / BUDGET_USABLE, 1);
   const pct       = Math.round(ratio * 100);
-  const over      = used > BUDGET.limit;
-  const barColor  = over ? '#F44336' : ratio >= 0.8 ? '#FF9800' : '#4CAF50';
+  const over      = used > BUDGET_USABLE;
+  const barColor  = over ? '#F44336' : ratio >= 0.8 ? '#FF9800' : '#2196F3';
 
-  const savingsHtml = !over
+  const savings = BUDGET_BASE - (used + FIXED_SAVING);
+
+  const savingsHtml = savings >= 0
     ? `<div class="budget-savings">
          <div class="budget-savings-label">👩 由美子 今月の貯金額</div>
-         <div class="budget-savings-calc">差額 ${fmt(remaining)} ＋ ¥10,000</div>
-         <div class="budget-savings-amount">${fmt(remaining + 10000)}</div>
+         <div class="budget-savings-calc">${fmt(BUDGET_BASE)} −（食費日用品 ${fmt(foodDaily)} ＋ 光熱費½ ${fmt(utilitiesHalf)} ＋ ¥10,000）</div>
+         <div class="budget-savings-amount">${fmt(savings)}</div>
          <div class="budget-savings-note">この金額を貯金してください 💰</div>
        </div>`
     : `<div class="budget-savings over">
          <div class="budget-savings-label">👩 由美子 今月の貯金額</div>
-         <div class="budget-savings-amount">¥10,000</div>
-         <div class="budget-savings-note">予算オーバーのため固定分のみ 💰</div>
+         <div class="budget-savings-amount">¥0</div>
+         <div class="budget-savings-note">予算オーバー ⚠️ ${fmt(Math.abs(savings))} 超過</div>
        </div>`;
 
   document.getElementById('budget-card').innerHTML = `
     <div class="budget-header">
-      <span class="budget-title">🛒 食費＋日用品 予算</span>
-      <span class="budget-limit">${fmt(BUDGET.limit)}</span>
+      <span class="budget-title">👩 由美子 予算</span>
+      <span class="budget-limit">${fmt(BUDGET_USABLE)}</span>
     </div>
     <div class="budget-bar-bg">
       <div class="budget-bar" style="width:${pct}%; background:${barColor}"></div>
@@ -487,8 +498,14 @@ function renderHome() {
     fmt(txs.reduce((s, t) => s + t.amount, 0));
   document.getElementById('home-today-total').textContent =
     fmt(txs.filter(t => t.date === todayStr).reduce((s, t) => s + t.amount, 0));
+  const utilitiesTotal = txs
+    .filter(t => UTILITIES.includes(t.category))
+    .reduce((s, t) => s + t.amount, 0);
+  const takuyaNonUtil = txs
+    .filter(t => t.payer === '卓哉' && !UTILITIES.includes(t.category))
+    .reduce((s, t) => s + t.amount, 0);
   document.getElementById('home-takuya-total').textContent =
-    fmt(txs.filter(t => t.payer === '卓哉').reduce((s, t) => s + t.amount, 0));
+    fmt(takuyaNonUtil + Math.round(utilitiesTotal / 2));
   document.getElementById('home-yumiko-total').textContent =
     fmt(txs.filter(t => t.payer === '由美子').reduce((s, t) => s + t.amount, 0));
 
@@ -725,11 +742,16 @@ function calcMonthlySavings() {
     state.transactions.map(t => dateToYM(t.date)).filter(ym => ym < thisMonth)
   );
   return [...ymSet].sort().map(ym => {
-    const used = state.transactions
-      .filter(t => dateToYM(t.date) === ym && BUDGET.categories.includes(t.category))
+    const monthTx = state.transactions.filter(t => dateToYM(t.date) === ym);
+    const foodDaily = monthTx
+      .filter(t => t.payer === '由美子' && ['food', 'daily'].includes(t.category))
       .reduce((s, t) => s + t.amount, 0);
-    const diff = BUDGET.limit - used;
-    const savings = (diff > 0 ? diff : 0) + 10000;
+    const utilitiesHalf = Math.round(
+      monthTx.filter(t => UTILITIES.includes(t.category))
+             .reduce((s, t) => s + t.amount, 0) / 2
+    );
+    const used = foodDaily + utilitiesHalf;
+    const savings = Math.max(0, BUDGET_BASE - (used + FIXED_SAVING));
     return { ym, used, savings };
   });
 }
