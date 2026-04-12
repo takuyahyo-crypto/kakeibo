@@ -229,11 +229,13 @@ input, textarea { font-family: inherit; }
 /* ボトムナビ */
 .bottom-nav {
   height: calc(var(--nav-h) + var(--safe-bot));
-  padding-bottom: var(--safe-bot);
-  background: var(--card);
+  padding: 6px 12px var(--safe-bot);
+  background: #fff;
   border-top: 1px solid var(--border);
   display: flex;
+  gap: 6px;
   flex-shrink: 0;
+  box-shadow: 0 -2px 12px rgba(0,0,0,.06);
 }
 
 .nav-btn {
@@ -244,15 +246,22 @@ input, textarea { font-family: inherit; }
   justify-content: center;
   gap: 2px;
   border: none;
-  background: none;
-  color: var(--sub);
+  background: #F0F4F8;
+  color: #90A4AE;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   padding: 8px 0;
-  transition: color .15s;
+  border-radius: 14px;
+  transition: background .18s, color .18s, transform .12s, box-shadow .18s;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
 }
-.nav-btn svg { width: 24px; height: 24px; fill: currentColor; }
-.nav-btn.active { color: var(--green); }
+.nav-btn:active { transform: scale(.93); }
+.nav-btn svg { width: 22px; height: 22px; fill: currentColor; }
+.nav-btn.active {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(33,150,243,.35);
+}
 
 /* ════════════════════════════════
    カード
