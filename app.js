@@ -1275,6 +1275,9 @@ function renderDayEvents(evts, day) {
           : `<div class="evt-budget">💰 予算 ${fmt(evt.budget)}</div>`;
       }
       const repeatTag = evt.repeat !== 'none' ? `<span class="evt-repeat-tag">🔁${REPEAT_LABELS[evt.repeat]}</span>` : '';
+      const timeHtml = evt.startTime
+        ? `<div class="evt-time">🕐 ${evt.startTime}${evt.endTime ? ' 〜 ' + evt.endTime : ''}</div>`
+        : '';
       const memoHtml = evt.memo ? `<div class="evt-memo">📝 ${escapeHtml(evt.memo)}</div>` : '';
 
       html += `<div class="evt-item">
@@ -1282,7 +1285,7 @@ function renderDayEvents(evts, day) {
         <div class="evt-body">
           <div class="evt-title-row"><span class="evt-title${evt.done ? ' style="text-decoration:line-through;opacity:.5"' : ''}">${escapeHtml(evt.title)}</span>${repeatTag}</div>
           <div class="evt-who">${WHO_LABELS[evt.who] || evt.who}</div>
-          ${budgetHtml}${memoHtml}
+          ${timeHtml}${budgetHtml}${memoHtml}
         </div>
         <div class="evt-actions">
           <label class="evt-check"><input type="checkbox" ${evt.done ? 'checked' : ''} onchange="toggleEventDone('${evt.id}',this.checked)"> 完了</label>
@@ -1321,6 +1324,8 @@ function openAddEvent() {
     ? `${state.currentMonth}-${String(state.selectedEvtDay).padStart(2,'0')}`
     : today();
   selectEvtWho('takuya');
+  document.getElementById('evt-start-time').value = '';
+  document.getElementById('evt-end-time').value = '';
   document.getElementById('evt-repeat').value = 'none';
   document.getElementById('evt-budget').value = '';
   document.getElementById('evt-memo').value = '';
@@ -1345,6 +1350,8 @@ async function saveEvent() {
     title,
     date:       document.getElementById('evt-date').value,
     who:        state.selectedEvtWho,
+    startTime:  document.getElementById('evt-start-time').value,
+    endTime:    document.getElementById('evt-end-time').value,
     budget:     document.getElementById('evt-budget').value || '0',
     memo:       document.getElementById('evt-memo').value.trim(),
     repeat:     document.getElementById('evt-repeat').value,

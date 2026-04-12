@@ -309,6 +309,14 @@
       <input type="text" id="evt-title" placeholder="予定のタイトル" maxlength="50">
       <input type="date" id="evt-date">
       <div class="form-group" style="margin-bottom:0">
+        <label style="margin-bottom:4px">時間（任意）</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="time" id="evt-start-time" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:var(--bg)">
+          <span style="color:#999">〜</span>
+          <input type="time" id="evt-end-time" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:var(--bg)">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
         <label style="margin-bottom:4px">誰の予定？</label>
         <div class="payer-grid" style="grid-template-columns:1fr 1fr 1fr">
           <button class="payer-btn sel" id="evt-who-takuya" onclick="selectEvtWho('takuya')">👨 卓哉</button>

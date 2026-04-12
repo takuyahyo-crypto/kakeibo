@@ -1141,6 +1141,7 @@ input, textarea { font-family: inherit; }
 .evt-repeat-tag { font-size: 10px; color: var(--sub); background: var(--bg); border-radius: 4px; padding: 1px 5px; }
 .evt-who { font-size: 12px; color: var(--sub); margin-top: 2px; }
 .evt-budget { font-size: 12px; color: #E65100; margin-top: 2px; }
+.evt-time { font-size: 12px; color: var(--green); font-weight: 600; margin-top: 2px; }
 .evt-memo { font-size: 11px; color: #666; margin-top: 2px; }
 .evt-actions {
   display: flex;
