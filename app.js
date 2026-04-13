@@ -1430,7 +1430,8 @@ function renderSharedTickerWithEvents(comments) {
   if (all.length === 0) {
     sharedComments = [];
     wrap.classList.add('hidden');
-    if (sharedCommentTimer) { clearInterval(sharedCommentTimer); sharedCommentTimer = null; }
+    if (textEl._tickerShow) { textEl.removeEventListener('animationend', textEl._tickerShow); textEl._tickerShow = null; }
+    sharedCommentTimer = null;
     return;
   }
 
@@ -1439,23 +1440,31 @@ function renderSharedTickerWithEvents(comments) {
   const wasEmpty = sharedComments.length === 0;
   sharedComments = all;
 
-  // タイマーが動いていない場合のみ新規起動（ポーリング更新時はインデックスをリセットしない）
+  // animationendで次メッセージへ（タイマー不使用）
   if (!sharedCommentTimer || wasEmpty) {
     sharedCommentIdx = 0;
-    if (sharedCommentTimer) clearInterval(sharedCommentTimer);
+    if (sharedCommentTimer) { clearInterval(sharedCommentTimer); sharedCommentTimer = null; }
+
     const show = () => {
       if (!sharedComments.length) return;
       const item = sharedComments[sharedCommentIdx % sharedComments.length];
       textEl.textContent = item.text;
+      sharedCommentIdx++;
+      const totalDist = window.innerWidth + textEl.scrollWidth;
+      const dur = (totalDist / 100).toFixed(1); // 100px/秒
       textEl.style.animation = 'none';
       textEl.offsetHeight;
-      textEl.style.animation = '';
-      sharedCommentIdx++;
+      textEl.style.animation = `shared-scroll ${dur}s linear`;
     };
+
+    // 既存のリスナーを除去してから登録
+    textEl._tickerShow && textEl.removeEventListener('animationend', textEl._tickerShow);
+    textEl._tickerShow = show;
+    textEl.addEventListener('animationend', show);
+    sharedCommentTimer = true; // 起動済みフラグ
     show();
-    sharedCommentTimer = setInterval(show, 14000);
   }
-  // タイマー動作中はsharedCommentsの更新のみ。次のshow()で自動的に新データを使う
+  // 動作中はsharedCommentsの更新のみ。次のanimationendで新データを使う
 }
 
 // ════════════════════════════════
