@@ -1414,8 +1414,10 @@ async function deleteEvent(id) {
 const _origRenderSharedTicker = typeof renderSharedTicker === 'function' ? renderSharedTicker : null;
 
 function renderSharedTickerWithEvents(comments) {
-  const tickerEvents = expandRepeats(state.events, state.currentMonth)
-    .filter(e => e.showTicker && !e.done)
+  const todayStr = today();
+  const tickerEvents = state.events
+    .filter(e => e.showTicker && !e.done && e.date >= todayStr)
+    .sort((a, b) => a.date.localeCompare(b.date))
     .map(e => ({
       id: 'evt_' + e.id,
       text: `📅 ${e.date.slice(5).replace('-','/')} ${e.title}（${WHO_LABELS[e.who]}）`,
