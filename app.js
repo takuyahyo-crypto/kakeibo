@@ -357,7 +357,7 @@ function switchTab(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   document.querySelector(`.nav-btn[data-tab="${name}"]`).classList.add('active');
-  if (name === 'calendar') renderCalendar();
+  if (name === 'calendar') { markCalSeen(); renderCalendar(); }
   if (name === 'report') renderReport();
 }
 
@@ -1306,10 +1306,14 @@ function renderDayEvents(evts, day) {
 function updateCalBadge() {
   const badge = document.getElementById('cal-badge');
   if (!badge) return;
-  const todayStr = today();
-  const expanded = expandRepeats(state.events, state.currentMonth);
-  const hasToday = expanded.some(e => e.date === todayStr && !e.done);
-  badge.classList.toggle('hidden', !hasToday);
+  const lastSeen = localStorage.getItem('calLastSeen') || '0';
+  const hasNew = state.events.some(e => e.createdAt && e.createdAt > lastSeen);
+  badge.classList.toggle('hidden', !hasNew);
+}
+
+function markCalSeen() {
+  localStorage.setItem('calLastSeen', new Date().toISOString());
+  updateCalBadge();
 }
 
 // 予定の追加/編集モーダル

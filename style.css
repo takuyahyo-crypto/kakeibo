@@ -1177,11 +1177,17 @@ input, textarea { font-family: inherit; }
 .nav-btn { position: relative; }
 .nav-badge {
   position: absolute;
-  top: 6px; right: 50%;
-  transform: translateX(12px);
-  width: 8px; height: 8px;
+  top: 4px; right: calc(50% - 14px);
+  width: 9px; height: 9px;
   background: #F44336;
   border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(244,67,54,.5);
+  animation: badge-pulse 1.8s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.25); opacity: .75; }
 }
 .nav-label { font-size: 10px; }
 
