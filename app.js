@@ -173,9 +173,10 @@ function stopPolling() {
 // ════════════════════════════════
 // 共有コメント
 // ════════════════════════════════
-let sharedCommentTimer = null;
-let sharedComments     = [];
-let sharedCommentIdx   = 0;
+let sharedCommentTimer  = null;
+let sharedComments      = [];
+let sharedCommentIdx    = 0;
+let _lastFetchedComments = [];
 
 async function fetchSharedComments() {
   if (!state.scriptUrl || !state.householdCode) return;
@@ -187,6 +188,7 @@ async function fetchSharedComments() {
     const res  = await fetch(url.toString(), { cache: 'no-store' });
     const json = await res.json();
     if (!Array.isArray(json)) return;
+    _lastFetchedComments = json;
     renderSharedTickerWithEvents(json);
   } catch { /* 無視 */ }
 }
@@ -1174,6 +1176,8 @@ async function fetchEvents() {
   if (Array.isArray(data)) {
     state.events = data;
     updateCalBadge();
+    // イベント取得後にティッカーも更新
+    renderSharedTickerWithEvents(_lastFetchedComments);
   }
 }
 
@@ -1406,7 +1410,6 @@ async function deleteEvent(id) {
 const _origRenderSharedTicker = typeof renderSharedTicker === 'function' ? renderSharedTicker : null;
 
 function renderSharedTickerWithEvents(comments) {
-  // カレンダーのticker表示ONの予定を追加
   const tickerEvents = expandRepeats(state.events, state.currentMonth)
     .filter(e => e.showTicker && !e.done)
     .map(e => ({
@@ -1416,29 +1419,39 @@ function renderSharedTickerWithEvents(comments) {
 
   const all = [...(comments || []), ...tickerEvents];
 
-  // 元のティッカーロジックを使用
   const wrap = document.getElementById('shared-ticker-wrap');
   const textEl = document.getElementById('shared-ticker-text');
   if (!wrap || !textEl) return;
 
-  sharedComments = all;
   if (all.length === 0) {
+    sharedComments = [];
     wrap.classList.add('hidden');
     if (sharedCommentTimer) { clearInterval(sharedCommentTimer); sharedCommentTimer = null; }
     return;
   }
+
   wrap.classList.remove('hidden');
-  sharedCommentIdx = 0;
-  const show = () => {
-    const item = sharedComments[sharedCommentIdx % sharedComments.length];
-    textEl.textContent = item.text;
-    textEl.style.animation = 'none';
-    textEl.offsetHeight;
-    textEl.style.animation = '';
-    sharedCommentIdx++;
-  };
-  show();
-  if (!sharedCommentTimer) sharedCommentTimer = setInterval(show, 14000);
+
+  const wasEmpty = sharedComments.length === 0;
+  sharedComments = all;
+
+  // タイマーが動いていない場合のみ新規起動（ポーリング更新時はインデックスをリセットしない）
+  if (!sharedCommentTimer || wasEmpty) {
+    sharedCommentIdx = 0;
+    if (sharedCommentTimer) clearInterval(sharedCommentTimer);
+    const show = () => {
+      if (!sharedComments.length) return;
+      const item = sharedComments[sharedCommentIdx % sharedComments.length];
+      textEl.textContent = item.text;
+      textEl.style.animation = 'none';
+      textEl.offsetHeight;
+      textEl.style.animation = '';
+      sharedCommentIdx++;
+    };
+    show();
+    sharedCommentTimer = setInterval(show, 14000);
+  }
+  // タイマー動作中はsharedCommentsの更新のみ。次のshow()で自動的に新データを使う
 }
 
 // ════════════════════════════════
