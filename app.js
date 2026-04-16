@@ -1279,8 +1279,11 @@ function renderDayEvents(evts, day) {
           : `<div class="evt-budget">💰 予算 ${fmt(evt.budget)}</div>`;
       }
       const repeatTag = evt.repeat !== 'none' ? `<span class="evt-repeat-tag">🔁${REPEAT_LABELS[evt.repeat]}</span>` : '';
-      const timeHtml = evt.startTime
-        ? `<div class="evt-time">🕐 ${evt.startTime}${evt.endTime ? ' 〜 ' + evt.endTime : ''}</div>`
+      const cleanTime = t => (t && /^\d{1,2}:\d{2}$/.test(t)) ? t : '';
+      const st = cleanTime(evt.startTime);
+      const et = cleanTime(evt.endTime);
+      const timeHtml = st
+        ? `<div class="evt-time">🕐 ${st}${et ? ' 〜 ' + et : ''}</div>`
         : '';
       const memoHtml = evt.memo ? `<div class="evt-memo">📝 ${escapeHtml(evt.memo)}</div>` : '';
 
