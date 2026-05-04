@@ -12,12 +12,16 @@ const CATS = [
   { id: 'gas',         label: 'ガス代',  icon: '🔥', color: '#FF5722' },
   { id: 'water',       label: '水道代',  icon: '💧', color: '#03A9F4' },
   { id: 'internet',    label: 'ネット代', icon: '📶', color: '#673AB7' },
-  { id: 'rent',        label: '家賃',    icon: '🏠', color: '#009688' },
-  { id: 'amazon',      label: 'Amazon',  icon: '📦', color: '#FF9900' },
-  { id: 'rakuten',     label: '楽天',    icon: '🛍️', color: '#BF0000' },
-  { id: 'other',       label: 'その他',  icon: '📂', color: '#607D8B' },
+  { id: 'rent',        label: '家賃',       icon: '🏠', color: '#009688' },
+  { id: 'net_shop',    label: 'ネット通販', icon: '🛍️', color: '#FF9900' },
+  { id: 'convenience', label: 'コンビニ',   icon: '🏪', color: '#E91E63' },
+  { id: 'other',       label: 'その他',    icon: '📂', color: '#607D8B' },
 ];
 const CAT_MAP = Object.fromEntries(CATS.map(c => [c.id, c]));
+CAT_MAP['utilities_half'] = { id: 'utilities_half', label: '光熱費（1人分）', icon: '💡', color: '#FFC107' };
+// 旧カテゴリ後方互換（既存データ表示用）
+CAT_MAP['amazon']  = { id: 'amazon',  label: 'Amazon', icon: '📦', color: '#FF9900' };
+CAT_MAP['rakuten'] = { id: 'rakuten', label: '楽天',   icon: '🛍️', color: '#BF0000' };
 
 
 // ════════════════════════════════
@@ -388,10 +392,14 @@ const FIXED_SAVING = 10000;
 const BUDGET_USABLE = BUDGET_BASE - FIXED_SAVING; // 90,000
 
 function renderBudget(txs) {
-  // 由美子の食費+日用品
-  const foodDaily = txs
-    .filter(t => t.payer === '由美子' && ['food', 'daily'].includes(t.category))
+  // 由美子の食費・日用品（個別）
+  const food = txs
+    .filter(t => t.payer === '由美子' && t.category === 'food')
     .reduce((s, t) => s + t.amount, 0);
+  const daily = txs
+    .filter(t => t.payer === '由美子' && t.category === 'daily')
+    .reduce((s, t) => s + t.amount, 0);
+  const foodDaily = food + daily;
   // 光熱費全体の半分
   const utilitiesHalf = Math.round(
     txs.filter(t => UTILITIES.includes(t.category))
@@ -404,19 +412,20 @@ function renderBudget(txs) {
   const over      = used > BUDGET_USABLE;
   const barColor  = over ? '#F44336' : ratio >= 0.8 ? '#FF9800' : '#2196F3';
 
-  const savings = BUDGET_BASE - (used + FIXED_SAVING);
+  // 貯金額 = 残り + ¥10,000（固定貯金分を上乗せ）
+  const savings = remaining + FIXED_SAVING;
 
-  const savingsHtml = savings >= 0
+  const savingsHtml = remaining >= 0
     ? `<div class="budget-savings">
-         <div class="budget-savings-label">👩 由美子 今月の貯金額</div>
-         <div class="budget-savings-calc">${fmt(BUDGET_BASE)} −（食費日用品 ${fmt(foodDaily)} ＋ 光熱費½ ${fmt(utilitiesHalf)} ＋ ¥10,000）</div>
+         <div class="budget-savings-label">👩 由美子の 今月の貯金額</div>
+         <div class="budget-savings-calc">残り ${fmt(remaining)} ＋ ¥10,000</div>
          <div class="budget-savings-amount">${fmt(savings)}</div>
          <div class="budget-savings-note">この金額を貯金してください 💰</div>
        </div>`
     : `<div class="budget-savings over">
-         <div class="budget-savings-label">👩 由美子 今月の貯金額</div>
+         <div class="budget-savings-label">👩 由美子の 今月の貯金額</div>
          <div class="budget-savings-amount">¥0</div>
-         <div class="budget-savings-note">予算オーバー ⚠️ ${fmt(Math.abs(savings))} 超過</div>
+         <div class="budget-savings-note">予算オーバー ⚠️ ${fmt(Math.abs(remaining))} 超過</div>
        </div>`;
 
   document.getElementById('budget-card').innerHTML = `
@@ -430,6 +439,20 @@ function renderBudget(txs) {
     <div class="budget-footer">
       <span class="budget-used">使用 ${fmt(used)}（${pct}%）</span>
       <span class="budget-remaining ${over ? 'over' : ''}">${over ? `⚠️ ${fmt(Math.abs(remaining))} オーバー` : `残り ${fmt(remaining)}`}</span>
+    </div>
+    <div class="budget-breakdown">
+      <div class="budget-breakdown-row">
+        <span>🛒 食費</span><span>${fmt(food)}</span>
+      </div>
+      <div class="budget-breakdown-row">
+        <span>🧴 日用品</span><span>${fmt(daily)}</span>
+      </div>
+      <div class="budget-breakdown-row">
+        <span>💡 光熱費（1人分）</span><span>${fmt(utilitiesHalf)}</span>
+      </div>
+      <div class="budget-breakdown-row total">
+        <span>合計</span><span>${fmt(used)}</span>
+      </div>
     </div>
     ${savingsHtml}`;
 }
@@ -521,8 +544,9 @@ function renderHome() {
     .reduce((s, t) => s + t.amount, 0);
   document.getElementById('home-takuya-total').textContent =
     fmt(takuyaNonUtil + Math.round(utilitiesTotal / 2));
+  const yumikoDirect = txs.filter(t => t.payer === '由美子').reduce((s, t) => s + t.amount, 0);
   document.getElementById('home-yumiko-total').textContent =
-    fmt(txs.filter(t => t.payer === '由美子').reduce((s, t) => s + t.amount, 0));
+    fmt(yumikoDirect + Math.round(utilitiesTotal / 2));
 
   renderBudget(txs);
   renderUtilities(txs);
@@ -766,7 +790,8 @@ function calcMonthlySavings() {
              .reduce((s, t) => s + t.amount, 0) / 2
     );
     const used = foodDaily + utilitiesHalf;
-    const savings = Math.max(0, BUDGET_BASE - (used + FIXED_SAVING));
+    const remaining = BUDGET_USABLE - used;
+    const savings = Math.max(0, remaining + FIXED_SAVING);
     return { ym, used, savings };
   });
 }
@@ -878,12 +903,15 @@ function showToast(msg) {
 // ════════════════════════════════
 // 汎用内訳モーダル
 // ════════════════════════════════
-function openDetailModal(title, total, txs) {
+function openDetailModal(title, total, txs, extraCats = {}) {
   document.getElementById('payer-detail-title').textContent = title;
   document.getElementById('payer-detail-total').textContent = fmt(total);
 
   const catMap = {};
   txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  Object.entries(extraCats).forEach(([catId, amt]) => {
+    if (amt > 0) catMap[catId] = (catMap[catId] || 0) + amt;
+  });
   const sortedCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
 
   document.getElementById('payer-detail-cats').innerHTML = sortedCats.length <= 1 ? '' :
@@ -910,9 +938,17 @@ function openDetailModal(title, total, txs) {
 
 function openPayerDetail(payer) {
   const txs = monthTxs().filter(t => t.payer === payer);
-  const total = txs.reduce((s, t) => s + t.amount, 0);
+  let total = txs.reduce((s, t) => s + t.amount, 0);
   const emoji = payer === '卓哉' ? '👨' : '👩';
-  openDetailModal(`${emoji} ${payer}の内訳`, total, txs);
+  if (payer === '由美子') {
+    const utilitiesHalf = Math.round(
+      monthTxs().filter(t => UTILITIES.includes(t.category)).reduce((s, t) => s + t.amount, 0) / 2
+    );
+    total += utilitiesHalf;
+    openDetailModal(`${emoji} ${payer}の内訳`, total, txs, { utilities_half: utilitiesHalf });
+  } else {
+    openDetailModal(`${emoji} ${payer}の内訳`, total, txs);
+  }
 }
 
 function openDayDetail(day) {

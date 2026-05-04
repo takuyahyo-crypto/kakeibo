@@ -999,6 +999,33 @@ input, textarea { font-family: inherit; }
 .budget-savings-note  { font-size: 12px; font-weight: 600; color: var(--green-dark); margin-top: 2px; }
 .budget-savings.over .budget-savings-note   { color: #E65100; }
 
+/* ────────────────────────────────
+   予算内訳（食費・日用品）
+──────────────────────────────── */
+.budget-breakdown {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.budget-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--sub);
+}
+.budget-breakdown-row.total {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
 /* ════════════════════════════════
    光熱費カード
 ════════════════════════════════ */
