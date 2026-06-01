@@ -458,6 +458,22 @@ function renderBudget(txs) {
 }
 
 // ════════════════════════════════
+// 祝日定義（2025・2026年）
+// ════════════════════════════════
+const HOLIDAYS = new Set([
+  // 2025年
+  '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24',
+  '2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06',
+  '2025-07-21','2025-08-11','2025-09-15','2025-09-23','2025-10-13',
+  '2025-11-03','2025-11-23','2025-11-24',
+  // 2026年
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23',
+  '2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-23','2026-10-12',
+  '2026-11-03','2026-11-23',
+]);
+
+// ════════════════════════════════
 // 光熱費カード
 // ════════════════════════════════
 const UTILITIES = ['internet', 'electricity', 'gas', 'water'];
@@ -1267,9 +1283,15 @@ function renderCalendar() {
     const isSel = d === state.selectedEvtDay;
     const evts = dayEvents[d] || [];
     const whos = [...new Set(evts.map(e => e.who))];
+    const dow = (firstDow + d - 1) % 7; // 0=日, 6=土
+    const isHoliday = HOLIDAYS.has(dateStr);
+    const isSun = dow === 0 || isHoliday;
+    const isSat = dow === 6;
+    const dowClass = isSun ? ' cal-sun' : isSat ? ' cal-sat' : '';
 
-    html += `<div class="cal-cell${isToday ? ' cal-today' : ''}${isSel ? ' cal-selected' : ''}" onclick="selectCalDay(${d})" style="cursor:pointer${isSel ? ';background:var(--green-bg);border-radius:8px' : ''}">`;
+    html += `<div class="cal-cell${isToday ? ' cal-today' : ''}${isSel ? ' cal-selected' : ''}${dowClass}" onclick="selectCalDay(${d})" style="cursor:pointer${isSel ? ';background:var(--green-bg);border-radius:8px' : ''}">`;
     html += `<div class="cal-day">${d}</div>`;
+    if (isHoliday) html += `<div class="cal-holiday-mark">祝</div>`;
     if (whos.length > 0) {
       html += '<div style="display:flex;gap:2px;margin-top:2px">';
       whos.forEach(w => html += `<span style="width:6px;height:6px;border-radius:50%;background:${WHO_COLORS[w] || '#999'}"></span>`);

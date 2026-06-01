@@ -769,6 +769,8 @@ input, textarea { font-family: inherit; }
   color: var(--sub);
   padding: 4px 0;
 }
+.cal-week-header > div:first-child { color: #E53935; } /* 日 */
+.cal-week-header > div:last-child  { color: #1976D2; } /* 土 */
 .cal-body {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -804,6 +806,17 @@ input, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.cal-sun .cal-day { color: #E53935; }
+.cal-sat .cal-day { color: #1976D2; }
+.cal-sun { background: rgba(229,57,53,.05); border-radius: 8px; }
+.cal-sat { background: rgba(25,118,210,.05); border-radius: 8px; }
+.cal-holiday-mark {
+  font-size: 8px;
+  font-weight: 700;
+  color: #E53935;
+  line-height: 1;
+  margin-top: -2px;
 }
 .cal-amt {
   font-size: 9px;
