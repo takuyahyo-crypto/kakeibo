@@ -219,7 +219,7 @@ function deleteComment(code, id) {
 //  カレンダーイベント
 // ──────────────────────────────────────────────────
 const EVENT_SHEET = 'events';
-const EVENT_HEADERS = ['householdCode','id','title','date','who','budget','memo','repeat','showTicker','done','createdAt','startTime','endTime'];
+const EVENT_HEADERS = ['householdCode','id','title','date','who','budget','memo','repeat','showTicker','done','createdAt','startTime','endTime','endDate'];
 
 function getEventSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -252,6 +252,7 @@ function getEvents(code) {
       createdAt:  row[10],
       startTime:  toTimeStr(row[11], tz),
       endTime:    toTimeStr(row[12], tz),
+      endDate:    row[13] ? toDateStr(row[13], tz) : '',
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -263,7 +264,7 @@ function addEvent(code, p) {
     Number(p.budget) || 0, p.memo || '', p.repeat || 'none',
     p.showTicker === 'true', p.done === 'true',
     p.createdAt || new Date().toISOString(),
-    p.startTime || '', p.endTime || ''
+    p.startTime || '', p.endTime || '', p.endDate || ''
   ]);
   return { ok: true };
 }
@@ -283,6 +284,7 @@ function updateEvent(code, p) {
       if (p.repeat !== undefined)     sheet.getRange(i+1, 8).setValue(p.repeat);
       if (p.startTime !== undefined)  sheet.getRange(i+1, 12).setValue(p.startTime);
       if (p.endTime !== undefined)    sheet.getRange(i+1, 13).setValue(p.endTime);
+      if (p.endDate !== undefined)    sheet.getRange(i+1, 14).setValue(p.endDate);
       break;
     }
   }

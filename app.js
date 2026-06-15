@@ -1275,6 +1275,25 @@ function renderCalendar() {
     dayEvents[d].push(evt);
   });
 
+  // 宿泊バー用マップ（state.eventsから直接参照）
+  const stayMap = {}; // day -> [{color, pos}]
+  const monthStart = `${ym}-01`;
+  const monthEnd   = `${ym}-${String(daysInMonth).padStart(2,'0')}`;
+  state.events.forEach(evt => {
+    if (!evt.endDate || evt.endDate <= evt.date) return;
+    if (evt.endDate < monthStart || evt.date > monthEnd) return;
+    const color = WHO_COLORS[evt.who] || '#999';
+    const s = Math.max(1,            parseInt((evt.date    < monthStart ? monthStart : evt.date).slice(8)));
+    const e = Math.min(daysInMonth,  parseInt((evt.endDate > monthEnd   ? monthEnd   : evt.endDate).slice(8)));
+    const realS = parseInt(evt.date.slice(8));
+    const realE = parseInt(evt.endDate.slice(8));
+    for (let d = s; d <= e; d++) {
+      const pos = d === realS ? 'start' : d === realE ? 'end' : 'mid';
+      if (!stayMap[d]) stayMap[d] = [];
+      stayMap[d].push({ color, pos });
+    }
+  });
+
   let html = '';
   for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell cal-empty"></div>';
   for (let d = 1; d <= daysInMonth; d++) {
@@ -1296,6 +1315,11 @@ function renderCalendar() {
       html += '<div style="display:flex;gap:2px;margin-top:2px">';
       whos.forEach(w => html += `<span style="width:6px;height:6px;border-radius:50%;background:${WHO_COLORS[w] || '#999'}"></span>`);
       html += '</div>';
+    }
+    if (stayMap[d]) {
+      stayMap[d].forEach(s => {
+        html += `<div class="cal-stay-bar cal-stay-${s.pos}" style="background:${s.color}"></div>`;
+      });
     }
     html += '</div>';
   }
@@ -1385,6 +1409,12 @@ function selectEvtWho(who) {
   });
 }
 
+function toggleStayMode() {
+  const isStay = document.getElementById('evt-stay').checked;
+  document.getElementById('evt-stay-group').classList.toggle('hidden', !isStay);
+  if (!isStay) document.getElementById('evt-end-date').value = '';
+}
+
 function openAddEvent() {
   state.editingEventId = null;
   document.getElementById('event-modal-title').textContent = '予定を追加';
@@ -1393,6 +1423,9 @@ function openAddEvent() {
     ? `${state.currentMonth}-${String(state.selectedEvtDay).padStart(2,'0')}`
     : today();
   selectEvtWho('takuya');
+  document.getElementById('evt-stay').checked = false;
+  document.getElementById('evt-end-date').value = '';
+  document.getElementById('evt-stay-group').classList.add('hidden');
   document.getElementById('evt-start-time').value = '';
   document.getElementById('evt-end-time').value = '';
   document.getElementById('evt-repeat').value = 'none';
@@ -1414,10 +1447,12 @@ async function saveEvent() {
   document.getElementById('loading-overlay').classList.remove('hidden');
   document.querySelector('.loading-label').textContent = '保存中...';
 
+  const isStay = document.getElementById('evt-stay').checked;
   const evt = {
     id:         state.editingEventId || Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     title,
     date:       document.getElementById('evt-date').value,
+    endDate:    isStay ? (document.getElementById('evt-end-date').value || '') : '',
     who:        state.selectedEvtWho,
     startTime:  document.getElementById('evt-start-time').value,
     endTime:    document.getElementById('evt-end-time').value,
