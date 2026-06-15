@@ -1379,6 +1379,7 @@ function renderDayEvents(evts, day) {
         <div class="evt-actions">
           <label class="evt-check"><input type="checkbox" ${evt.done ? 'checked' : ''} onchange="toggleEventDone('${evt.id}',this.checked)"> 完了</label>
           <label class="evt-ticker-toggle"><input type="checkbox" ${evt.showTicker ? 'checked' : ''} onchange="toggleEventTicker('${evt.id}',this.checked)"> 📣</label>
+          <button class="evt-edit" onclick="openEditEvent('${evt.id}')" title="編集">✏️</button>
           <button class="evt-del" onclick="deleteEvent('${evt.id}')" title="削除">✕</button>
         </div>
       </div>`;
@@ -1407,6 +1408,27 @@ function selectEvtWho(who) {
   ['takuya','yumiko','both'].forEach(w => {
     document.getElementById(`evt-who-${w}`).classList.toggle('sel', w === who);
   });
+}
+
+function openEditEvent(id) {
+  const evt = state.events.find(e => e.id === id);
+  if (!evt) return;
+  state.editingEventId = id;
+  document.getElementById('event-modal-title').textContent = '予定を編集';
+  document.getElementById('evt-title').value = evt.title;
+  document.getElementById('evt-date').value = evt.date;
+  selectEvtWho(evt.who || 'takuya');
+  const hasEndDate = !!(evt.endDate && evt.endDate > evt.date);
+  document.getElementById('evt-stay').checked = hasEndDate;
+  document.getElementById('evt-end-date').value = hasEndDate ? evt.endDate : '';
+  document.getElementById('evt-stay-group').classList.toggle('hidden', !hasEndDate);
+  document.getElementById('evt-start-time').value = evt.startTime || '';
+  document.getElementById('evt-end-time').value = evt.endTime || '';
+  document.getElementById('evt-repeat').value = evt.repeat || 'none';
+  document.getElementById('evt-budget').value = evt.budget > 0 ? evt.budget : '';
+  document.getElementById('evt-memo').value = evt.memo || '';
+  document.getElementById('evt-ticker').checked = !!evt.showTicker;
+  document.getElementById('event-modal').classList.remove('hidden');
 }
 
 function toggleStayMode() {
@@ -1448,6 +1470,7 @@ async function saveEvent() {
   document.querySelector('.loading-label').textContent = '保存中...';
 
   const isStay = document.getElementById('evt-stay').checked;
+  const existing = state.editingEventId ? state.events.find(e => e.id === state.editingEventId) : null;
   const evt = {
     id:         state.editingEventId || Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     title,
@@ -1460,8 +1483,8 @@ async function saveEvent() {
     memo:       document.getElementById('evt-memo').value.trim(),
     repeat:     document.getElementById('evt-repeat').value,
     showTicker: String(document.getElementById('evt-ticker').checked),
-    done:       'false',
-    createdAt:  new Date().toISOString(),
+    done:       existing ? String(existing.done) : 'false',
+    createdAt:  existing ? existing.createdAt : new Date().toISOString(),
   };
 
   if (state.scriptUrl) {
