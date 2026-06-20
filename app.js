@@ -1661,11 +1661,12 @@ function renderReport() {
       ? `<span class="report-cat-diff ${catDiff > 0 ? 'up' : 'down'}">${catDiff > 0 ? '▲' : '▼'}${fmt(Math.abs(catDiff))}</span>`
       : '<span class="report-cat-diff">±0</span>';
 
-    html += `<div class="report-cat-row">
+    html += `<div class="report-cat-row report-cat-tap" onclick="openCatDetail('${catId}')">
       <span class="report-cat-icon">${cat.icon}</span>
       <span class="report-cat-name">${cat.label}</span>
       <span class="report-cat-amount">${fmt(amount)}</span>
       ${diffStr}
+      <span class="report-cat-chevron">›</span>
     </div>`;
   });
 

@@ -1293,3 +1293,6 @@ input, textarea { font-family: inherit; }
 .report-cat-name { font-size: 13px; flex: 1; }
 .report-cat-amount { font-size: 13px; font-weight: 700; }
 .report-cat-diff { font-size: 11px; min-width: 60px; text-align: right; }
+.report-cat-tap { cursor: pointer; border-radius: 8px; margin: 0 -8px; padding: 6px 8px; }
+.report-cat-tap:active { background: var(--bg); }
+.report-cat-chevron { font-size: 16px; color: var(--sub); margin-left: 2px; }
