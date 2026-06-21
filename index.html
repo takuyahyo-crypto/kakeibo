@@ -127,6 +127,10 @@
 
     <!-- 追加 -->
     <div class="tab-pane" id="tab-add">
+      <div id="edit-tx-banner" class="hidden" style="background:#FFF8E1;border-left:4px solid #FFC107;padding:10px 16px;margin:8px 12px 0;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:#795548">
+        <span>✏️ 取引を編集中</span>
+        <button onclick="cancelEditTx()" style="background:none;border:none;font-size:12px;color:#999;cursor:pointer;font-weight:600">キャンセル</button>
+      </div>
       <div class="card">
         <!-- 金額 -->
         <div class="form-group">

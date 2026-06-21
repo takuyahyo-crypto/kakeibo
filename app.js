@@ -43,6 +43,7 @@ const state = {
   selectedEvtDay: null,
   selectedEvtWho: 'takuya',
   editingEventId: null,
+  editingTxId: null,
 };
 
 // ════════════════════════════════
@@ -627,6 +628,37 @@ function selectPayer(name) {
   document.getElementById('payer-yumiko').classList.toggle('sel', name === '由美子');
 }
 
+function openEditTx(id) {
+  const tx = state.transactions.find(t => t.id === id);
+  if (!tx) return;
+  state.editingTxId = id;
+  document.getElementById('inp-amount').value = tx.amount;
+  document.getElementById('inp-date').value   = tx.date;
+  document.getElementById('inp-memo').value   = tx.memo || '';
+  calcState = { val: null, op: null };
+  document.getElementById('calc-expr').textContent = '';
+  state.selectedCat   = tx.category || 'food';
+  state.selectedPayer = tx.payer    || '卓哉';
+  renderCatGrid();
+  selectPayer(tx.payer || '卓哉');
+  document.getElementById('btn-add-submit').textContent = '更新する';
+  document.getElementById('edit-tx-banner').classList.remove('hidden');
+  switchTab('add');
+}
+
+function cancelEditTx() {
+  state.editingTxId = null;
+  document.getElementById('btn-add-submit').textContent = '追加する';
+  document.getElementById('edit-tx-banner').classList.add('hidden');
+  document.getElementById('inp-amount').value = '';
+  document.getElementById('inp-memo').value   = '';
+  document.getElementById('inp-date').value   = today();
+  state.selectedCat   = 'food';
+  state.selectedPayer = '卓哉';
+  renderCatGrid();
+  selectPayer('卓哉');
+}
+
 async function submitAdd() {
   const amount = parseInt(document.getElementById('inp-amount').value);
   const date   = document.getElementById('inp-date').value;
@@ -648,15 +680,35 @@ async function submitAdd() {
 
   document.getElementById('btn-add-submit').disabled = true;
   document.getElementById('loading-overlay').classList.remove('hidden');
+  document.querySelector('.loading-label').textContent = state.editingTxId ? '更新中...' : '追加中...';
 
-  if (state.scriptUrl) {
-    await addTransactionApi(tx);
+  if (state.editingTxId) {
+    const orig = state.transactions.find(t => t.id === state.editingTxId);
+    tx.id        = state.editingTxId;
+    tx.shop      = orig ? (orig.shop || '') : '';
+    tx.createdAt = orig ? orig.createdAt : tx.createdAt;
+    if (state.scriptUrl) {
+      await deleteTransactionApi(state.editingTxId);
+      await addTransactionApi(tx);
+    } else {
+      deleteTransactionLocal(state.editingTxId);
+      addTransactionLocal(tx);
+    }
   } else {
-    addTransactionLocal(tx);
+    if (state.scriptUrl) {
+      await addTransactionApi(tx);
+    } else {
+      addTransactionLocal(tx);
+    }
   }
 
   document.getElementById('loading-overlay').classList.add('hidden');
   document.getElementById('btn-add-submit').disabled = false;
+
+  const wasEditing = !!state.editingTxId;
+  state.editingTxId = null;
+  document.getElementById('btn-add-submit').textContent = '追加する';
+  document.getElementById('edit-tx-banner').classList.add('hidden');
 
   // リセット
   document.getElementById('inp-amount').value = '';
@@ -665,12 +717,11 @@ async function submitAdd() {
   calcState = { val: null, op: null };
   document.getElementById('inp-date').value   = today();
   state.selectedCat   = 'food';
-
   state.selectedPayer = '卓哉';
   renderCatGrid();
   selectPayer('卓哉');
 
-  showToast('追加しました ✓');
+  showToast(wasEditing ? '更新しました ✓' : '追加しました ✓');
   switchTab('home');
 }
 
@@ -728,7 +779,10 @@ function txHtml(t) {
       </div>
       <div class="tx-right">
         <div class="tx-amount">${fmt(t.amount)}</div>
-        <button class="tx-del" onclick="confirmDelete('${t.id}')">×</button>
+        <div class="tx-btns">
+          <button class="tx-edit" onclick="openEditTx('${t.id}')">✏️</button>
+          <button class="tx-del" onclick="confirmDelete('${t.id}')">×</button>
+        </div>
       </div>
     </div>`;
 }
