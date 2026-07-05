@@ -567,6 +567,7 @@ function renderHome() {
 
   renderBudget(txs);
   renderUtilities(txs);
+  renderTodayCard();
 
   const list   = document.getElementById('home-tx-list');
   const recent = txs.slice(0, 5);
@@ -1094,121 +1095,62 @@ function bindEvents() {
 }
 
 // ════════════════════════════════
-// 天気
+// 今日のダッシュボード
 // ════════════════════════════════
-const WMO_ICON = {
-  0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️',
-  45:'🌫️', 48:'🌫️',
-  51:'🌦️', 53:'🌦️', 55:'🌧️',
-  61:'🌧️', 63:'🌧️', 65:'🌧️',
-  71:'🌨️', 73:'❄️', 75:'❄️',
-  80:'🌦️', 81:'🌧️', 82:'⛈️',
-  95:'⛈️', 96:'⛈️', 99:'⛈️',
-};
-const WMO_LABEL = {
-  0:'快晴', 1:'晴れ', 2:'曇りがち', 3:'曇り',
-  45:'霧', 48:'霧',
-  51:'小雨', 53:'雨', 55:'強雨',
-  61:'小雨', 63:'雨', 65:'大雨',
-  71:'小雪', 73:'雪', 75:'大雪',
-  80:'にわか雨', 81:'にわか雨', 82:'激しい雨',
-  95:'雷雨', 96:'雷雨', 99:'激しい雷雨',
-};
+let _newsHeadlines = [];
+let _newsIdx = 0;
 
-// 朝7時・昼12時・夜18時のインデックスを時刻リストから取得
-function findHourIndex(times, targetHour) {
+function renderTodayCard() {
+  const card = document.getElementById('today-card');
+  if (!card) return;
+
   const todayStr = today();
-  const target   = `${todayStr}T${String(targetHour).padStart(2,'0')}:00`;
-  const idx      = times.indexOf(target);
-  // 見つからなければ近い時刻を探す
-  if (idx !== -1) return idx;
-  return times.findIndex(t => t.startsWith(todayStr + 'T' + String(targetHour).padStart(2,'0')));
-}
-
-function buildWeatherComment(times, codes, temps) {
-  const todayStr = today();
-  const rainCodes = new Set([51,53,55,61,63,65,80,81,82,95,96,99]);
-  const snowCodes = new Set([71,73,75]);
-  const todayIdxs = times.reduce((arr, t, i) => { if (t.startsWith(todayStr)) arr.push(i); return arr; }, []);
-
-  for (const i of todayIdxs) {
-    if (snowCodes.has(codes[i])) {
-      const hour = parseInt(times[i].slice(11, 13));
-      return `本日は${hour}時ごろに雪の予報があります ❄️`;
-    }
-    if (rainCodes.has(codes[i])) {
-      const hour = parseInt(times[i].slice(11, 13));
-      return `本日は${hour}時ごろに${WMO_LABEL[codes[i]]}の予報があります ☔`;
-    }
-  }
-  if (todayIdxs.length > 0) {
-    const maxTemp = Math.round(Math.max(...todayIdxs.map(i => temps[i])));
-    const minTemp = Math.round(Math.min(...todayIdxs.map(i => temps[i])));
-    const noonIdx = todayIdxs.find(i => times[i].includes('T12:')) ?? todayIdxs[0];
-    const noonLabel = WMO_LABEL[codes[noonIdx]] || '晴れ';
-    if (maxTemp >= 28) return `今日は最高${maxTemp}°の暑い一日です 🌞`;
-    if (minTemp <= 5)  return `今日は最低${minTemp}°の寒い一日です 🥶`;
-    return `今日は一日を通して${noonLabel}の見込みです 🌤️`;
-  }
-  return '今日も一日頑張りましょう！';
-}
-
-async function fetchWeather() {
-  const card = document.getElementById('weather-card');
-  if (!navigator.geolocation) {
-    card.innerHTML = '<div class="weather-err">位置情報が使えません</div>';
-    return;
-  }
-
   const d = new Date();
   const DAYS = ['日','月','火','水','木','金','土'];
-  const dateHeader = `${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;
+  const dow = d.getDay();
+  const isHoliday = HOLIDAYS.has(todayStr);
+  const dateHtml = `${d.getMonth()+1}月${d.getDate()}日（${DAYS[dow]}）${isHoliday ? '<span class="today-hol">祝</span>' : ''}`;
 
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const { latitude: lat, longitude: lon } = pos.coords;
-    try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
-        + `&hourly=temperature_2m,weathercode&timezone=Asia%2FTokyo&forecast_days=1`;
-      const res  = await fetch(url);
-      const json = await res.json();
-      const times = json.hourly.time;
-      const temps = json.hourly.temperature_2m;
-      const codes = json.hourly.weathercode;
+  // 今日の予定・次の予定（今月＋来月の繰り返し展開分から探す）
+  const ymThis = todayStr.slice(0, 7);
+  const nd = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  const ymNext = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}`;
+  const all = [...expandRepeats(state.events, ymThis), ...expandRepeats(state.events, ymNext)]
+    .filter(e => !e.done);
 
-      const slots = [
-        { label: '朝', hour: 7  },
-        { label: '昼', hour: 12 },
-        { label: '夜', hour: 18 },
-      ];
+  const todays = all
+    .filter(e => e.date === todayStr || (e.endDate && e.date <= todayStr && todayStr <= e.endDate))
+    .sort((a, b) => (a.startTime || '99').localeCompare(b.startTime || '99'));
 
-      const slotHtml = slots.map(s => {
-        const i    = findHourIndex(times, s.hour);
-        const temp = i !== -1 ? Math.round(temps[i]) : '--';
-        const code = i !== -1 ? codes[i] : 0;
-        const icon  = WMO_ICON[code]  || '🌡️';
-        const label = WMO_LABEL[code] || '';
-        return `
-          <div class="weather-slot">
-            <div class="ws-label">${s.label}</div>
-            <div class="ws-icon">${icon}</div>
-            <div class="ws-desc">${label}</div>
-            <div class="ws-temp">${temp}°</div>
-          </div>`;
-      }).join('');
+  let todayHtml;
+  if (todays.length === 0) {
+    todayHtml = '<div class="today-row"><span class="today-row-icon">🗓</span>今日の予定はありません</div>';
+  } else {
+    todayHtml = todays.map(e => {
+      const time = e.startTime && /^\d{1,2}:\d{2}$/.test(e.startTime) ? ` ${e.startTime}` : '';
+      return `<div class="today-row"><span class="today-row-icon">🗓</span><b>${escapeHtml(e.title)}</b>${time}（${WHO_LABELS[e.who] || ''}）</div>`;
+    }).join('');
+  }
 
-      const comment = buildWeatherComment(times, codes, temps);
-      card.innerHTML = `
-        <div class="weather-top">
-          <span class="weather-date">${dateHeader}</span>
-        </div>
-        <div class="weather-slots">${slotHtml}</div>
-        <div class="weather-comment" id="weather-ticker"><span id="weather-ticker-text">${comment}</span></div>`;
-    } catch {
-      card.innerHTML = '<div class="weather-err">天気を取得できませんでした</div>';
-    }
-  }, () => {
-    card.innerHTML = '<div class="weather-err">位置情報を許可してください</div>';
-  });
+  // 次の予定カウントダウン
+  const next = all
+    .filter(e => e.date > todayStr)
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  let nextHtml = '';
+  if (next) {
+    const diffDays = Math.round((new Date(next.date + 'T00:00:00') - new Date(todayStr + 'T00:00:00')) / 86400000);
+    const [, mm, dd] = next.date.split('-');
+    const countdown = diffDays === 1 ? '明日' : `あと${diffDays}日`;
+    nextHtml = `<div class="today-row today-next"><span class="today-row-icon">⏳</span>次の予定：<b>${escapeHtml(next.title)}</b>（${parseInt(mm)}/${parseInt(dd)}）<span class="today-countdown">${countdown}</span></div>`;
+  }
+
+  card.innerHTML = `
+    <div class="today-top">
+      <span class="today-date">${dateHtml}</span>
+    </div>
+    ${todayHtml}
+    ${nextHtml}
+    <div class="today-news${_newsHeadlines.length ? '' : ' hidden'}" id="today-news"><span id="today-news-text">${_newsHeadlines.length ? escapeHtml(_newsHeadlines[_newsIdx % _newsHeadlines.length]) : ''}</span></div>`;
 }
 
 async function fetchNews() {
@@ -1226,24 +1168,21 @@ async function fetchNews() {
     const headlines = json.map(item => `📰 ${item.title}`).filter(t => t.length > 2);
     if (!headlines.length) return;
 
-    const tickerText = document.getElementById('weather-ticker-text');
-    if (!tickerText) return;
-
-    const weatherComment = tickerText.textContent;
-    const messages = [weatherComment, ...headlines];
-    let idx = 1;
+    _newsHeadlines = headlines;
+    _newsIdx = 0;
+    renderTodayCard(); // ニュース行を表示
 
     setInterval(() => {
-      const el = document.getElementById('weather-ticker-text');
+      _newsIdx++;
+      const el = document.getElementById('today-news-text');
       if (!el) return;
       el.style.animation = 'none';
-      el.textContent = messages[idx % messages.length];
+      el.textContent = _newsHeadlines[_newsIdx % _newsHeadlines.length];
       void el.offsetWidth;
       el.style.animation = '';
-      idx++;
     }, 14000);
   } catch {
-    // 取得失敗→天気コメントのみ継続
+    // 取得失敗→ニュース行は非表示のまま
   }
 }
 
@@ -1259,8 +1198,8 @@ function init() {
   bindEvents();
   document.getElementById('inp-date').value = today();
   renderCatGrid();
-  fetchWeather();
-  setTimeout(fetchNews, 3000); // 天気表示後3秒後にニュース取得
+  renderTodayCard();
+  setTimeout(fetchNews, 3000); // 表示後3秒後にニュース取得
 
   if (state.householdCode) {
     document.getElementById('setup-screen').classList.add('hidden');
@@ -1282,6 +1221,7 @@ async function fetchEvents() {
   if (Array.isArray(data)) {
     state.events = data;
     updateCalBadge();
+    renderTodayCard();
     // イベント取得後にティッカーも更新
     renderSharedTickerWithEvents(_lastFetchedComments);
   }
