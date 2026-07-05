@@ -362,7 +362,7 @@ function switchTab(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   document.querySelector(`.nav-btn[data-tab="${name}"]`).classList.add('active');
-  if (name === 'calendar') { markCalSeen(); renderCalendar(); }
+  if (name === 'calendar') { captureNewEvents(); markCalSeen(); renderCalendar(); }
   if (name === 'report') renderReport();
 }
 
@@ -1362,7 +1362,9 @@ function renderCalendar() {
     const isSat = dow === 6;
     const dowClass = isSun ? ' cal-sun' : isSat ? ' cal-sat' : '';
 
+    const hasNew = evts.some(e => newEvtIds.has(e.id));
     html += `<div class="cal-cell${isToday ? ' cal-today' : ''}${isSel ? ' cal-selected' : ''}${dowClass}" onclick="selectCalDay(${d})" style="cursor:pointer${isSel ? ';background:var(--green-bg);border-radius:8px' : ''}">`;
+    if (hasNew) html += `<div class="cal-new-mark">NEW</div>`;
     html += `<div class="cal-day">${d}</div>`;
     if (isHoliday) html += `<div class="cal-holiday-mark">祝</div>`;
     if (whos.length > 0) {
@@ -1426,7 +1428,7 @@ function renderDayEvents(evts, day) {
       html += `<div class="evt-item">
         <span class="evt-dot ${evt.who}"></span>
         <div class="evt-body">
-          <div class="evt-title-row"><span class="evt-title${evt.done ? ' style="text-decoration:line-through;opacity:.5"' : ''}">${escapeHtml(evt.title)}</span>${repeatTag}</div>
+          <div class="evt-title-row"><span class="evt-title${evt.done ? ' style="text-decoration:line-through;opacity:.5"' : ''}">${escapeHtml(evt.title)}</span>${repeatTag}${newEvtIds.has(evt.id) ? '<span class="evt-new-tag">NEW</span>' : ''}</div>
           <div class="evt-who">${WHO_LABELS[evt.who] || evt.who}</div>
           ${timeHtml}${budgetHtml}${memoHtml}
         </div>
@@ -1449,6 +1451,15 @@ function updateCalBadge() {
   const lastSeen = localStorage.getItem('calLastSeen') || '0';
   const hasNew = state.events.some(e => e.createdAt && e.createdAt > lastSeen);
   badge.classList.toggle('hidden', !hasNew);
+}
+
+// カレンダーを開いた時点の新着予定を記憶（NEWマーク表示用）
+let newEvtIds = new Set();
+function captureNewEvents() {
+  const lastSeen = localStorage.getItem('calLastSeen') || '0';
+  newEvtIds = new Set(
+    state.events.filter(e => e.createdAt && e.createdAt > lastSeen).map(e => e.id)
+  );
 }
 
 function markCalSeen() {
@@ -1549,6 +1560,7 @@ async function saveEvent() {
   document.getElementById('loading-overlay').classList.add('hidden');
   closeEventModal();
   await fetchEvents();
+  markCalSeen(); // 自分で追加した予定はNEW扱いにしない
   renderCalendar();
   showToast('予定を保存しました ✓');
 }
